@@ -1,0 +1,7 @@
+target/
+release-staging/
+e2e/tools/
+e2e/.artifacts/
+e2e/midi_audio_harness/target/
+*.log
+.DS_Store

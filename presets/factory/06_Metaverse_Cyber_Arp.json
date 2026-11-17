@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "name": "Metaverse Cyber Arp",
+  "author": "Phantom Spire",
+  "category": "Arp",
+  "params": {
+    "g_voc": 8,
+    "o_mod_1": "SawPWM",
+    "o_wav_1": "Saw",
+    "o_ca_1": 0.4,
+    "o_ucnt_1": 3,
+    "o_udet_1": 0.22,
+    "o_lvl_1": 0.8,
+    "o_mod_2": "HardFM",
+    "o_wav_2": "Hollow",
+    "o_ca_2": 0.35,
+    "o_lvl_2": 0.35,
+    "f_mod_1": "Infecto",
+    "f_typ_1": "LP4",
+    "f_cut_1": 1200.0,
+    "f_res_1": 0.36,
+    "e_att_1": 0.002,
+    "e_dec_1": 0.22,
+    "e_sus_1": 0.2,
+    "e_rel_1": 0.14,
+    "es_tgt_1_1": "Filter1 Cutoff",
+    "es_amt_1_1": 0.52,
+    "a_on": true,
+    "a_mod": "Up/Down",
+    "a_oct": 2,
+    "a_syn": true,
+    "a_sdiv": "1/16",
+    "a_gat": 0.65,
+    "a_swg": 0.12,
+    "s_syn_1": true,
+    "s_sdiv_1": "1/16",
+    "m_src_1": "STP 1",
+    "m_tgt_1": "Filter1 Cutoff",
+    "m_amt_1": 0.35,
+    "x_dsyn": true,
+    "x_ddw": 0.3,
+    "x_rdw": 0.2
+  },
+  "steppers": [
+    [0.9, 0.3, 0.6, 0.2, 0.95, 0.4, 0.7, 0.25, 0.85, 0.3, 0.65, 0.2, 1.0, 0.5, 0.75, 0.4],
+    [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+  ],
+  "arp_pattern": {
+    "steps_enabled": 65535,
+    "step_offsets": [0, 0, 12, 0, 7, 0, 12, -12, 0, 0, 5, 0, 7, 12, 0, 0],
+    "step_velocities": [120, 80, 110, 75, 115, 85, 105, 90, 120, 80, 100, 75, 115, 95, 110, 85]
+  }
+}

@@ -1,0 +1,2362 @@
+{
+  "project": "phantom_spire",
+  "total_cases": 224,
+  "tier_counts": {
+    "T1": 95,
+    "T2": 95,
+    "T3": 22,
+    "T4": 12
+  },
+  "cases": [
+    {
+      "id": "T1-F01-01",
+      "tier": 1,
+      "dag_level": "L0",
+      "feature": "F01",
+      "feature_name": "Rust/nih-plug Crate & Bundling",
+      "runner": "pluginval",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Rust/nih-plug Crate & Bundling"
+    },
+    {
+      "id": "T1-F01-02",
+      "tier": 1,
+      "dag_level": "L0",
+      "feature": "F01",
+      "feature_name": "Rust/nih-plug Crate & Bundling",
+      "runner": "pluginval",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Rust/nih-plug Crate & Bundling"
+    },
+    {
+      "id": "T1-F01-03",
+      "tier": 1,
+      "dag_level": "L0",
+      "feature": "F01",
+      "feature_name": "Rust/nih-plug Crate & Bundling",
+      "runner": "pluginval",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Rust/nih-plug Crate & Bundling"
+    },
+    {
+      "id": "T1-F01-04",
+      "tier": 1,
+      "dag_level": "L0",
+      "feature": "F01",
+      "feature_name": "Rust/nih-plug Crate & Bundling",
+      "runner": "pluginval",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Rust/nih-plug Crate & Bundling"
+    },
+    {
+      "id": "T1-F01-05",
+      "tier": 1,
+      "dag_level": "L0",
+      "feature": "F01",
+      "feature_name": "Rust/nih-plug Crate & Bundling",
+      "runner": "pluginval",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Rust/nih-plug Crate & Bundling"
+    },
+    {
+      "id": "T2-F01-01",
+      "tier": 2,
+      "dag_level": "L0",
+      "feature": "F01",
+      "feature_name": "Rust/nih-plug Crate & Bundling",
+      "runner": "pluginval",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Rust/nih-plug Crate & Bundling"
+    },
+    {
+      "id": "T2-F01-02",
+      "tier": 2,
+      "dag_level": "L0",
+      "feature": "F01",
+      "feature_name": "Rust/nih-plug Crate & Bundling",
+      "runner": "pluginval",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Rust/nih-plug Crate & Bundling"
+    },
+    {
+      "id": "T2-F01-03",
+      "tier": 2,
+      "dag_level": "L0",
+      "feature": "F01",
+      "feature_name": "Rust/nih-plug Crate & Bundling",
+      "runner": "pluginval",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Rust/nih-plug Crate & Bundling"
+    },
+    {
+      "id": "T2-F01-04",
+      "tier": 2,
+      "dag_level": "L0",
+      "feature": "F01",
+      "feature_name": "Rust/nih-plug Crate & Bundling",
+      "runner": "pluginval",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Rust/nih-plug Crate & Bundling"
+    },
+    {
+      "id": "T2-F01-05",
+      "tier": 2,
+      "dag_level": "L0",
+      "feature": "F01",
+      "feature_name": "Rust/nih-plug Crate & Bundling",
+      "runner": "pluginval",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Rust/nih-plug Crate & Bundling"
+    },
+    {
+      "id": "T1-F02-01",
+      "tier": 1,
+      "dag_level": "L1",
+      "feature": "F02",
+      "feature_name": "Spire Nested Parameter Model",
+      "runner": "pluginval",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Spire Nested Parameter Model"
+    },
+    {
+      "id": "T1-F02-02",
+      "tier": 1,
+      "dag_level": "L1",
+      "feature": "F02",
+      "feature_name": "Spire Nested Parameter Model",
+      "runner": "pluginval",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Spire Nested Parameter Model"
+    },
+    {
+      "id": "T1-F02-03",
+      "tier": 1,
+      "dag_level": "L1",
+      "feature": "F02",
+      "feature_name": "Spire Nested Parameter Model",
+      "runner": "pluginval",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Spire Nested Parameter Model"
+    },
+    {
+      "id": "T1-F02-04",
+      "tier": 1,
+      "dag_level": "L1",
+      "feature": "F02",
+      "feature_name": "Spire Nested Parameter Model",
+      "runner": "pluginval",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Spire Nested Parameter Model"
+    },
+    {
+      "id": "T1-F02-05",
+      "tier": 1,
+      "dag_level": "L1",
+      "feature": "F02",
+      "feature_name": "Spire Nested Parameter Model",
+      "runner": "pluginval",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Spire Nested Parameter Model"
+    },
+    {
+      "id": "T2-F02-01",
+      "tier": 2,
+      "dag_level": "L1",
+      "feature": "F02",
+      "feature_name": "Spire Nested Parameter Model",
+      "runner": "pluginval",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Spire Nested Parameter Model"
+    },
+    {
+      "id": "T2-F02-02",
+      "tier": 2,
+      "dag_level": "L1",
+      "feature": "F02",
+      "feature_name": "Spire Nested Parameter Model",
+      "runner": "pluginval",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Spire Nested Parameter Model"
+    },
+    {
+      "id": "T2-F02-03",
+      "tier": 2,
+      "dag_level": "L1",
+      "feature": "F02",
+      "feature_name": "Spire Nested Parameter Model",
+      "runner": "pluginval",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Spire Nested Parameter Model"
+    },
+    {
+      "id": "T2-F02-04",
+      "tier": 2,
+      "dag_level": "L1",
+      "feature": "F02",
+      "feature_name": "Spire Nested Parameter Model",
+      "runner": "pluginval",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Spire Nested Parameter Model"
+    },
+    {
+      "id": "T2-F02-05",
+      "tier": 2,
+      "dag_level": "L1",
+      "feature": "F02",
+      "feature_name": "Spire Nested Parameter Model",
+      "runner": "pluginval",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Spire Nested Parameter Model"
+    },
+    {
+      "id": "T1-F03-01",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F03",
+      "feature_name": "Preset Management & Undo/Redo",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Preset Management & Undo/Redo"
+    },
+    {
+      "id": "T1-F03-02",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F03",
+      "feature_name": "Preset Management & Undo/Redo",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Preset Management & Undo/Redo"
+    },
+    {
+      "id": "T1-F03-03",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F03",
+      "feature_name": "Preset Management & Undo/Redo",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Preset Management & Undo/Redo"
+    },
+    {
+      "id": "T1-F03-04",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F03",
+      "feature_name": "Preset Management & Undo/Redo",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Preset Management & Undo/Redo"
+    },
+    {
+      "id": "T1-F03-05",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F03",
+      "feature_name": "Preset Management & Undo/Redo",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Preset Management & Undo/Redo"
+    },
+    {
+      "id": "T2-F03-01",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F03",
+      "feature_name": "Preset Management & Undo/Redo",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Preset Management & Undo/Redo"
+    },
+    {
+      "id": "T2-F03-02",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F03",
+      "feature_name": "Preset Management & Undo/Redo",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Preset Management & Undo/Redo"
+    },
+    {
+      "id": "T2-F03-03",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F03",
+      "feature_name": "Preset Management & Undo/Redo",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Preset Management & Undo/Redo"
+    },
+    {
+      "id": "T2-F03-04",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F03",
+      "feature_name": "Preset Management & Undo/Redo",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Preset Management & Undo/Redo"
+    },
+    {
+      "id": "T2-F03-05",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F03",
+      "feature_name": "Preset Management & Undo/Redo",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Preset Management & Undo/Redo"
+    },
+    {
+      "id": "T1-F04-01",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F04",
+      "feature_name": "Lock-Free Audio-UI Bridge",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Lock-Free Audio-UI Bridge"
+    },
+    {
+      "id": "T1-F04-02",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F04",
+      "feature_name": "Lock-Free Audio-UI Bridge",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Lock-Free Audio-UI Bridge"
+    },
+    {
+      "id": "T1-F04-03",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F04",
+      "feature_name": "Lock-Free Audio-UI Bridge",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Lock-Free Audio-UI Bridge"
+    },
+    {
+      "id": "T1-F04-04",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F04",
+      "feature_name": "Lock-Free Audio-UI Bridge",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Lock-Free Audio-UI Bridge"
+    },
+    {
+      "id": "T1-F04-05",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F04",
+      "feature_name": "Lock-Free Audio-UI Bridge",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Lock-Free Audio-UI Bridge"
+    },
+    {
+      "id": "T2-F04-01",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F04",
+      "feature_name": "Lock-Free Audio-UI Bridge",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Lock-Free Audio-UI Bridge"
+    },
+    {
+      "id": "T2-F04-02",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F04",
+      "feature_name": "Lock-Free Audio-UI Bridge",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Lock-Free Audio-UI Bridge"
+    },
+    {
+      "id": "T2-F04-03",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F04",
+      "feature_name": "Lock-Free Audio-UI Bridge",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Lock-Free Audio-UI Bridge"
+    },
+    {
+      "id": "T2-F04-04",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F04",
+      "feature_name": "Lock-Free Audio-UI Bridge",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Lock-Free Audio-UI Bridge"
+    },
+    {
+      "id": "T2-F04-05",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F04",
+      "feature_name": "Lock-Free Audio-UI Bridge",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Lock-Free Audio-UI Bridge"
+    },
+    {
+      "id": "T1-F05-01",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F05",
+      "feature_name": "4 Multi-Mode Oscillators",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for 4 Multi-Mode Oscillators"
+    },
+    {
+      "id": "T1-F05-02",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F05",
+      "feature_name": "4 Multi-Mode Oscillators",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for 4 Multi-Mode Oscillators"
+    },
+    {
+      "id": "T1-F05-03",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F05",
+      "feature_name": "4 Multi-Mode Oscillators",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for 4 Multi-Mode Oscillators"
+    },
+    {
+      "id": "T1-F05-04",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F05",
+      "feature_name": "4 Multi-Mode Oscillators",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for 4 Multi-Mode Oscillators"
+    },
+    {
+      "id": "T1-F05-05",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F05",
+      "feature_name": "4 Multi-Mode Oscillators",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for 4 Multi-Mode Oscillators"
+    },
+    {
+      "id": "T2-F05-01",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F05",
+      "feature_name": "4 Multi-Mode Oscillators",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for 4 Multi-Mode Oscillators"
+    },
+    {
+      "id": "T2-F05-02",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F05",
+      "feature_name": "4 Multi-Mode Oscillators",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for 4 Multi-Mode Oscillators"
+    },
+    {
+      "id": "T2-F05-03",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F05",
+      "feature_name": "4 Multi-Mode Oscillators",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for 4 Multi-Mode Oscillators"
+    },
+    {
+      "id": "T2-F05-04",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F05",
+      "feature_name": "4 Multi-Mode Oscillators",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for 4 Multi-Mode Oscillators"
+    },
+    {
+      "id": "T2-F05-05",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F05",
+      "feature_name": "4 Multi-Mode Oscillators",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for 4 Multi-Mode Oscillators"
+    },
+    {
+      "id": "T1-F06-01",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F06",
+      "feature_name": "Unison & Osc Mix",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Unison & Osc Mix"
+    },
+    {
+      "id": "T1-F06-02",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F06",
+      "feature_name": "Unison & Osc Mix",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Unison & Osc Mix"
+    },
+    {
+      "id": "T1-F06-03",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F06",
+      "feature_name": "Unison & Osc Mix",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Unison & Osc Mix"
+    },
+    {
+      "id": "T1-F06-04",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F06",
+      "feature_name": "Unison & Osc Mix",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Unison & Osc Mix"
+    },
+    {
+      "id": "T1-F06-05",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F06",
+      "feature_name": "Unison & Osc Mix",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Unison & Osc Mix"
+    },
+    {
+      "id": "T2-F06-01",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F06",
+      "feature_name": "Unison & Osc Mix",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Unison & Osc Mix"
+    },
+    {
+      "id": "T2-F06-02",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F06",
+      "feature_name": "Unison & Osc Mix",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Unison & Osc Mix"
+    },
+    {
+      "id": "T2-F06-03",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F06",
+      "feature_name": "Unison & Osc Mix",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Unison & Osc Mix"
+    },
+    {
+      "id": "T2-F06-04",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F06",
+      "feature_name": "Unison & Osc Mix",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Unison & Osc Mix"
+    },
+    {
+      "id": "T2-F06-05",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F06",
+      "feature_name": "Unison & Osc Mix",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Unison & Osc Mix"
+    },
+    {
+      "id": "T1-F07-01",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F07",
+      "feature_name": "Dual Multimode Filters",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Dual Multimode Filters"
+    },
+    {
+      "id": "T1-F07-02",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F07",
+      "feature_name": "Dual Multimode Filters",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Dual Multimode Filters"
+    },
+    {
+      "id": "T1-F07-03",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F07",
+      "feature_name": "Dual Multimode Filters",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Dual Multimode Filters"
+    },
+    {
+      "id": "T1-F07-04",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F07",
+      "feature_name": "Dual Multimode Filters",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Dual Multimode Filters"
+    },
+    {
+      "id": "T1-F07-05",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F07",
+      "feature_name": "Dual Multimode Filters",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Dual Multimode Filters"
+    },
+    {
+      "id": "T2-F07-01",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F07",
+      "feature_name": "Dual Multimode Filters",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Dual Multimode Filters"
+    },
+    {
+      "id": "T2-F07-02",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F07",
+      "feature_name": "Dual Multimode Filters",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Dual Multimode Filters"
+    },
+    {
+      "id": "T2-F07-03",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F07",
+      "feature_name": "Dual Multimode Filters",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Dual Multimode Filters"
+    },
+    {
+      "id": "T2-F07-04",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F07",
+      "feature_name": "Dual Multimode Filters",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Dual Multimode Filters"
+    },
+    {
+      "id": "T2-F07-05",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F07",
+      "feature_name": "Dual Multimode Filters",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Dual Multimode Filters"
+    },
+    {
+      "id": "T1-F08-01",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F08",
+      "feature_name": "Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning"
+    },
+    {
+      "id": "T1-F08-02",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F08",
+      "feature_name": "Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning"
+    },
+    {
+      "id": "T1-F08-03",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F08",
+      "feature_name": "Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning"
+    },
+    {
+      "id": "T1-F08-04",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F08",
+      "feature_name": "Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning"
+    },
+    {
+      "id": "T1-F08-05",
+      "tier": 1,
+      "dag_level": "L2",
+      "feature": "F08",
+      "feature_name": "Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning"
+    },
+    {
+      "id": "T2-F08-01",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F08",
+      "feature_name": "Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning"
+    },
+    {
+      "id": "T2-F08-02",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F08",
+      "feature_name": "Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning"
+    },
+    {
+      "id": "T2-F08-03",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F08",
+      "feature_name": "Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning"
+    },
+    {
+      "id": "T2-F08-04",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F08",
+      "feature_name": "Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning"
+    },
+    {
+      "id": "T2-F08-05",
+      "tier": 2,
+      "dag_level": "L2",
+      "feature": "F08",
+      "feature_name": "Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Voice Allocation, Glide, Pitch/Mod, Drift, Microtuning"
+    },
+    {
+      "id": "T1-F09-01",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F09",
+      "feature_name": "4x 6-Stage Envelopes",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for 4x 6-Stage Envelopes"
+    },
+    {
+      "id": "T1-F09-02",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F09",
+      "feature_name": "4x 6-Stage Envelopes",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for 4x 6-Stage Envelopes"
+    },
+    {
+      "id": "T1-F09-03",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F09",
+      "feature_name": "4x 6-Stage Envelopes",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for 4x 6-Stage Envelopes"
+    },
+    {
+      "id": "T1-F09-04",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F09",
+      "feature_name": "4x 6-Stage Envelopes",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for 4x 6-Stage Envelopes"
+    },
+    {
+      "id": "T1-F09-05",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F09",
+      "feature_name": "4x 6-Stage Envelopes",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for 4x 6-Stage Envelopes"
+    },
+    {
+      "id": "T2-F09-01",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F09",
+      "feature_name": "4x 6-Stage Envelopes",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for 4x 6-Stage Envelopes"
+    },
+    {
+      "id": "T2-F09-02",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F09",
+      "feature_name": "4x 6-Stage Envelopes",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for 4x 6-Stage Envelopes"
+    },
+    {
+      "id": "T2-F09-03",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F09",
+      "feature_name": "4x 6-Stage Envelopes",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for 4x 6-Stage Envelopes"
+    },
+    {
+      "id": "T2-F09-04",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F09",
+      "feature_name": "4x 6-Stage Envelopes",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for 4x 6-Stage Envelopes"
+    },
+    {
+      "id": "T2-F09-05",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F09",
+      "feature_name": "4x 6-Stage Envelopes",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for 4x 6-Stage Envelopes"
+    },
+    {
+      "id": "T1-F10-01",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F10",
+      "feature_name": "4x LFOs & 2x Steppers",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for 4x LFOs & 2x Steppers"
+    },
+    {
+      "id": "T1-F10-02",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F10",
+      "feature_name": "4x LFOs & 2x Steppers",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for 4x LFOs & 2x Steppers"
+    },
+    {
+      "id": "T1-F10-03",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F10",
+      "feature_name": "4x LFOs & 2x Steppers",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for 4x LFOs & 2x Steppers"
+    },
+    {
+      "id": "T1-F10-04",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F10",
+      "feature_name": "4x LFOs & 2x Steppers",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for 4x LFOs & 2x Steppers"
+    },
+    {
+      "id": "T1-F10-05",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F10",
+      "feature_name": "4x LFOs & 2x Steppers",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for 4x LFOs & 2x Steppers"
+    },
+    {
+      "id": "T2-F10-01",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F10",
+      "feature_name": "4x LFOs & 2x Steppers",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for 4x LFOs & 2x Steppers"
+    },
+    {
+      "id": "T2-F10-02",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F10",
+      "feature_name": "4x LFOs & 2x Steppers",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for 4x LFOs & 2x Steppers"
+    },
+    {
+      "id": "T2-F10-03",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F10",
+      "feature_name": "4x LFOs & 2x Steppers",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for 4x LFOs & 2x Steppers"
+    },
+    {
+      "id": "T2-F10-04",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F10",
+      "feature_name": "4x LFOs & 2x Steppers",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for 4x LFOs & 2x Steppers"
+    },
+    {
+      "id": "T2-F10-05",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F10",
+      "feature_name": "4x LFOs & 2x Steppers",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for 4x LFOs & 2x Steppers"
+    },
+    {
+      "id": "T1-F11-01",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F11",
+      "feature_name": "Pre-Voice Arpeggiator",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Pre-Voice Arpeggiator"
+    },
+    {
+      "id": "T1-F11-02",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F11",
+      "feature_name": "Pre-Voice Arpeggiator",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Pre-Voice Arpeggiator"
+    },
+    {
+      "id": "T1-F11-03",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F11",
+      "feature_name": "Pre-Voice Arpeggiator",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Pre-Voice Arpeggiator"
+    },
+    {
+      "id": "T1-F11-04",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F11",
+      "feature_name": "Pre-Voice Arpeggiator",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Pre-Voice Arpeggiator"
+    },
+    {
+      "id": "T1-F11-05",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F11",
+      "feature_name": "Pre-Voice Arpeggiator",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Pre-Voice Arpeggiator"
+    },
+    {
+      "id": "T2-F11-01",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F11",
+      "feature_name": "Pre-Voice Arpeggiator",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Pre-Voice Arpeggiator"
+    },
+    {
+      "id": "T2-F11-02",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F11",
+      "feature_name": "Pre-Voice Arpeggiator",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Pre-Voice Arpeggiator"
+    },
+    {
+      "id": "T2-F11-03",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F11",
+      "feature_name": "Pre-Voice Arpeggiator",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Pre-Voice Arpeggiator"
+    },
+    {
+      "id": "T2-F11-04",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F11",
+      "feature_name": "Pre-Voice Arpeggiator",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Pre-Voice Arpeggiator"
+    },
+    {
+      "id": "T2-F11-05",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F11",
+      "feature_name": "Pre-Voice Arpeggiator",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Pre-Voice Arpeggiator"
+    },
+    {
+      "id": "T1-F12-01",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F12",
+      "feature_name": "15-Slot Mod Matrix & 4 Macros",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for 15-Slot Mod Matrix & 4 Macros"
+    },
+    {
+      "id": "T1-F12-02",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F12",
+      "feature_name": "15-Slot Mod Matrix & 4 Macros",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for 15-Slot Mod Matrix & 4 Macros"
+    },
+    {
+      "id": "T1-F12-03",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F12",
+      "feature_name": "15-Slot Mod Matrix & 4 Macros",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for 15-Slot Mod Matrix & 4 Macros"
+    },
+    {
+      "id": "T1-F12-04",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F12",
+      "feature_name": "15-Slot Mod Matrix & 4 Macros",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for 15-Slot Mod Matrix & 4 Macros"
+    },
+    {
+      "id": "T1-F12-05",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F12",
+      "feature_name": "15-Slot Mod Matrix & 4 Macros",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for 15-Slot Mod Matrix & 4 Macros"
+    },
+    {
+      "id": "T2-F12-01",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F12",
+      "feature_name": "15-Slot Mod Matrix & 4 Macros",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for 15-Slot Mod Matrix & 4 Macros"
+    },
+    {
+      "id": "T2-F12-02",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F12",
+      "feature_name": "15-Slot Mod Matrix & 4 Macros",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for 15-Slot Mod Matrix & 4 Macros"
+    },
+    {
+      "id": "T2-F12-03",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F12",
+      "feature_name": "15-Slot Mod Matrix & 4 Macros",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for 15-Slot Mod Matrix & 4 Macros"
+    },
+    {
+      "id": "T2-F12-04",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F12",
+      "feature_name": "15-Slot Mod Matrix & 4 Macros",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for 15-Slot Mod Matrix & 4 Macros"
+    },
+    {
+      "id": "T2-F12-05",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F12",
+      "feature_name": "15-Slot Mod Matrix & 4 Macros",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for 15-Slot Mod Matrix & 4 Macros"
+    },
+    {
+      "id": "T1-F13-01",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F13",
+      "feature_name": "5-Module FX Rack",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for 5-Module FX Rack"
+    },
+    {
+      "id": "T1-F13-02",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F13",
+      "feature_name": "5-Module FX Rack",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for 5-Module FX Rack"
+    },
+    {
+      "id": "T1-F13-03",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F13",
+      "feature_name": "5-Module FX Rack",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for 5-Module FX Rack"
+    },
+    {
+      "id": "T1-F13-04",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F13",
+      "feature_name": "5-Module FX Rack",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for 5-Module FX Rack"
+    },
+    {
+      "id": "T1-F13-05",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F13",
+      "feature_name": "5-Module FX Rack",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for 5-Module FX Rack"
+    },
+    {
+      "id": "T2-F13-01",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F13",
+      "feature_name": "5-Module FX Rack",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for 5-Module FX Rack"
+    },
+    {
+      "id": "T2-F13-02",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F13",
+      "feature_name": "5-Module FX Rack",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for 5-Module FX Rack"
+    },
+    {
+      "id": "T2-F13-03",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F13",
+      "feature_name": "5-Module FX Rack",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for 5-Module FX Rack"
+    },
+    {
+      "id": "T2-F13-04",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F13",
+      "feature_name": "5-Module FX Rack",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for 5-Module FX Rack"
+    },
+    {
+      "id": "T2-F13-05",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F13",
+      "feature_name": "5-Module FX Rack",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for 5-Module FX Rack"
+    },
+    {
+      "id": "T1-F14-01",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F14",
+      "feature_name": "Master X-Comp, Character & EQ",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Master X-Comp, Character & EQ"
+    },
+    {
+      "id": "T1-F14-02",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F14",
+      "feature_name": "Master X-Comp, Character & EQ",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Master X-Comp, Character & EQ"
+    },
+    {
+      "id": "T1-F14-03",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F14",
+      "feature_name": "Master X-Comp, Character & EQ",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Master X-Comp, Character & EQ"
+    },
+    {
+      "id": "T1-F14-04",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F14",
+      "feature_name": "Master X-Comp, Character & EQ",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Master X-Comp, Character & EQ"
+    },
+    {
+      "id": "T1-F14-05",
+      "tier": 1,
+      "dag_level": "L3",
+      "feature": "F14",
+      "feature_name": "Master X-Comp, Character & EQ",
+      "runner": "audio",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Master X-Comp, Character & EQ"
+    },
+    {
+      "id": "T2-F14-01",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F14",
+      "feature_name": "Master X-Comp, Character & EQ",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Master X-Comp, Character & EQ"
+    },
+    {
+      "id": "T2-F14-02",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F14",
+      "feature_name": "Master X-Comp, Character & EQ",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Master X-Comp, Character & EQ"
+    },
+    {
+      "id": "T2-F14-03",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F14",
+      "feature_name": "Master X-Comp, Character & EQ",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Master X-Comp, Character & EQ"
+    },
+    {
+      "id": "T2-F14-04",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F14",
+      "feature_name": "Master X-Comp, Character & EQ",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Master X-Comp, Character & EQ"
+    },
+    {
+      "id": "T2-F14-05",
+      "tier": 2,
+      "dag_level": "L3",
+      "feature": "F14",
+      "feature_name": "Master X-Comp, Character & EQ",
+      "runner": "audio",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Master X-Comp, Character & EQ"
+    },
+    {
+      "id": "T1-F15-01",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F15",
+      "feature_name": "Phantom Voicer P5 Theme Kit",
+      "runner": "ui_judge",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Phantom Voicer P5 Theme Kit"
+    },
+    {
+      "id": "T1-F15-02",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F15",
+      "feature_name": "Phantom Voicer P5 Theme Kit",
+      "runner": "ui_judge",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Phantom Voicer P5 Theme Kit"
+    },
+    {
+      "id": "T1-F15-03",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F15",
+      "feature_name": "Phantom Voicer P5 Theme Kit",
+      "runner": "ui_judge",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Phantom Voicer P5 Theme Kit"
+    },
+    {
+      "id": "T1-F15-04",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F15",
+      "feature_name": "Phantom Voicer P5 Theme Kit",
+      "runner": "ui_judge",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Phantom Voicer P5 Theme Kit"
+    },
+    {
+      "id": "T1-F15-05",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F15",
+      "feature_name": "Phantom Voicer P5 Theme Kit",
+      "runner": "ui_judge",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Phantom Voicer P5 Theme Kit"
+    },
+    {
+      "id": "T2-F15-01",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F15",
+      "feature_name": "Phantom Voicer P5 Theme Kit",
+      "runner": "ui_judge",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Phantom Voicer P5 Theme Kit"
+    },
+    {
+      "id": "T2-F15-02",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F15",
+      "feature_name": "Phantom Voicer P5 Theme Kit",
+      "runner": "ui_judge",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Phantom Voicer P5 Theme Kit"
+    },
+    {
+      "id": "T2-F15-03",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F15",
+      "feature_name": "Phantom Voicer P5 Theme Kit",
+      "runner": "ui_judge",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Phantom Voicer P5 Theme Kit"
+    },
+    {
+      "id": "T2-F15-04",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F15",
+      "feature_name": "Phantom Voicer P5 Theme Kit",
+      "runner": "ui_judge",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Phantom Voicer P5 Theme Kit"
+    },
+    {
+      "id": "T2-F15-05",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F15",
+      "feature_name": "Phantom Voicer P5 Theme Kit",
+      "runner": "ui_judge",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Phantom Voicer P5 Theme Kit"
+    },
+    {
+      "id": "T1-F16-01",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F16",
+      "feature_name": "Custom P5 Controls & 1220x760 Layout",
+      "runner": "ui_judge",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Custom P5 Controls & 1220x760 Layout"
+    },
+    {
+      "id": "T1-F16-02",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F16",
+      "feature_name": "Custom P5 Controls & 1220x760 Layout",
+      "runner": "ui_judge",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Custom P5 Controls & 1220x760 Layout"
+    },
+    {
+      "id": "T1-F16-03",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F16",
+      "feature_name": "Custom P5 Controls & 1220x760 Layout",
+      "runner": "ui_judge",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Custom P5 Controls & 1220x760 Layout"
+    },
+    {
+      "id": "T1-F16-04",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F16",
+      "feature_name": "Custom P5 Controls & 1220x760 Layout",
+      "runner": "ui_judge",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Custom P5 Controls & 1220x760 Layout"
+    },
+    {
+      "id": "T1-F16-05",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F16",
+      "feature_name": "Custom P5 Controls & 1220x760 Layout",
+      "runner": "ui_judge",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Custom P5 Controls & 1220x760 Layout"
+    },
+    {
+      "id": "T2-F16-01",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F16",
+      "feature_name": "Custom P5 Controls & 1220x760 Layout",
+      "runner": "ui_judge",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Custom P5 Controls & 1220x760 Layout"
+    },
+    {
+      "id": "T2-F16-02",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F16",
+      "feature_name": "Custom P5 Controls & 1220x760 Layout",
+      "runner": "ui_judge",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Custom P5 Controls & 1220x760 Layout"
+    },
+    {
+      "id": "T2-F16-03",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F16",
+      "feature_name": "Custom P5 Controls & 1220x760 Layout",
+      "runner": "ui_judge",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Custom P5 Controls & 1220x760 Layout"
+    },
+    {
+      "id": "T2-F16-04",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F16",
+      "feature_name": "Custom P5 Controls & 1220x760 Layout",
+      "runner": "ui_judge",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Custom P5 Controls & 1220x760 Layout"
+    },
+    {
+      "id": "T2-F16-05",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F16",
+      "feature_name": "Custom P5 Controls & 1220x760 Layout",
+      "runner": "ui_judge",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Custom P5 Controls & 1220x760 Layout"
+    },
+    {
+      "id": "T1-F17-01",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F17",
+      "feature_name": "GitHub Auto-Updater & Old-File Cleansing",
+      "runner": "updater",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for GitHub Auto-Updater & Old-File Cleansing"
+    },
+    {
+      "id": "T1-F17-02",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F17",
+      "feature_name": "GitHub Auto-Updater & Old-File Cleansing",
+      "runner": "updater",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for GitHub Auto-Updater & Old-File Cleansing"
+    },
+    {
+      "id": "T1-F17-03",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F17",
+      "feature_name": "GitHub Auto-Updater & Old-File Cleansing",
+      "runner": "updater",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for GitHub Auto-Updater & Old-File Cleansing"
+    },
+    {
+      "id": "T1-F17-04",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F17",
+      "feature_name": "GitHub Auto-Updater & Old-File Cleansing",
+      "runner": "updater",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for GitHub Auto-Updater & Old-File Cleansing"
+    },
+    {
+      "id": "T1-F17-05",
+      "tier": 1,
+      "dag_level": "L4",
+      "feature": "F17",
+      "feature_name": "GitHub Auto-Updater & Old-File Cleansing",
+      "runner": "updater",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for GitHub Auto-Updater & Old-File Cleansing"
+    },
+    {
+      "id": "T2-F17-01",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F17",
+      "feature_name": "GitHub Auto-Updater & Old-File Cleansing",
+      "runner": "updater",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for GitHub Auto-Updater & Old-File Cleansing"
+    },
+    {
+      "id": "T2-F17-02",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F17",
+      "feature_name": "GitHub Auto-Updater & Old-File Cleansing",
+      "runner": "updater",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for GitHub Auto-Updater & Old-File Cleansing"
+    },
+    {
+      "id": "T2-F17-03",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F17",
+      "feature_name": "GitHub Auto-Updater & Old-File Cleansing",
+      "runner": "updater",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for GitHub Auto-Updater & Old-File Cleansing"
+    },
+    {
+      "id": "T2-F17-04",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F17",
+      "feature_name": "GitHub Auto-Updater & Old-File Cleansing",
+      "runner": "updater",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for GitHub Auto-Updater & Old-File Cleansing"
+    },
+    {
+      "id": "T2-F17-05",
+      "tier": 2,
+      "dag_level": "L4",
+      "feature": "F17",
+      "feature_name": "GitHub Auto-Updater & Old-File Cleansing",
+      "runner": "updater",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for GitHub Auto-Updater & Old-File Cleansing"
+    },
+    {
+      "id": "T1-F18-01",
+      "tier": 1,
+      "dag_level": "L5",
+      "feature": "F18",
+      "feature_name": "E2E Test Infrastructure & Tiers 1-4 Suite",
+      "runner": "all",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for E2E Test Infrastructure & Tiers 1-4 Suite"
+    },
+    {
+      "id": "T1-F18-02",
+      "tier": 1,
+      "dag_level": "L5",
+      "feature": "F18",
+      "feature_name": "E2E Test Infrastructure & Tiers 1-4 Suite",
+      "runner": "all",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for E2E Test Infrastructure & Tiers 1-4 Suite"
+    },
+    {
+      "id": "T1-F18-03",
+      "tier": 1,
+      "dag_level": "L5",
+      "feature": "F18",
+      "feature_name": "E2E Test Infrastructure & Tiers 1-4 Suite",
+      "runner": "all",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for E2E Test Infrastructure & Tiers 1-4 Suite"
+    },
+    {
+      "id": "T1-F18-04",
+      "tier": 1,
+      "dag_level": "L5",
+      "feature": "F18",
+      "feature_name": "E2E Test Infrastructure & Tiers 1-4 Suite",
+      "runner": "all",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for E2E Test Infrastructure & Tiers 1-4 Suite"
+    },
+    {
+      "id": "T1-F18-05",
+      "tier": 1,
+      "dag_level": "L5",
+      "feature": "F18",
+      "feature_name": "E2E Test Infrastructure & Tiers 1-4 Suite",
+      "runner": "all",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for E2E Test Infrastructure & Tiers 1-4 Suite"
+    },
+    {
+      "id": "T2-F18-01",
+      "tier": 2,
+      "dag_level": "L5",
+      "feature": "F18",
+      "feature_name": "E2E Test Infrastructure & Tiers 1-4 Suite",
+      "runner": "all",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for E2E Test Infrastructure & Tiers 1-4 Suite"
+    },
+    {
+      "id": "T2-F18-02",
+      "tier": 2,
+      "dag_level": "L5",
+      "feature": "F18",
+      "feature_name": "E2E Test Infrastructure & Tiers 1-4 Suite",
+      "runner": "all",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for E2E Test Infrastructure & Tiers 1-4 Suite"
+    },
+    {
+      "id": "T2-F18-03",
+      "tier": 2,
+      "dag_level": "L5",
+      "feature": "F18",
+      "feature_name": "E2E Test Infrastructure & Tiers 1-4 Suite",
+      "runner": "all",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for E2E Test Infrastructure & Tiers 1-4 Suite"
+    },
+    {
+      "id": "T2-F18-04",
+      "tier": 2,
+      "dag_level": "L5",
+      "feature": "F18",
+      "feature_name": "E2E Test Infrastructure & Tiers 1-4 Suite",
+      "runner": "all",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for E2E Test Infrastructure & Tiers 1-4 Suite"
+    },
+    {
+      "id": "T2-F18-05",
+      "tier": 2,
+      "dag_level": "L5",
+      "feature": "F18",
+      "feature_name": "E2E Test Infrastructure & Tiers 1-4 Suite",
+      "runner": "all",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for E2E Test Infrastructure & Tiers 1-4 Suite"
+    },
+    {
+      "id": "T1-F19-01",
+      "tier": 1,
+      "dag_level": "L6",
+      "feature": "F19",
+      "feature_name": "Final Verification & Tier 5 Hardening",
+      "runner": "all",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #1 for Final Verification & Tier 5 Hardening"
+    },
+    {
+      "id": "T1-F19-02",
+      "tier": 1,
+      "dag_level": "L6",
+      "feature": "F19",
+      "feature_name": "Final Verification & Tier 5 Hardening",
+      "runner": "all",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #2 for Final Verification & Tier 5 Hardening"
+    },
+    {
+      "id": "T1-F19-03",
+      "tier": 1,
+      "dag_level": "L6",
+      "feature": "F19",
+      "feature_name": "Final Verification & Tier 5 Hardening",
+      "runner": "all",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #3 for Final Verification & Tier 5 Hardening"
+    },
+    {
+      "id": "T1-F19-04",
+      "tier": 1,
+      "dag_level": "L6",
+      "feature": "F19",
+      "feature_name": "Final Verification & Tier 5 Hardening",
+      "runner": "all",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #4 for Final Verification & Tier 5 Hardening"
+    },
+    {
+      "id": "T1-F19-05",
+      "tier": 1,
+      "dag_level": "L6",
+      "feature": "F19",
+      "feature_name": "Final Verification & Tier 5 Hardening",
+      "runner": "all",
+      "category": "core_functional",
+      "assertion": "Core functional & BASI check #5 for Final Verification & Tier 5 Hardening"
+    },
+    {
+      "id": "T2-F19-01",
+      "tier": 2,
+      "dag_level": "L6",
+      "feature": "F19",
+      "feature_name": "Final Verification & Tier 5 Hardening",
+      "runner": "all",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #1 for Final Verification & Tier 5 Hardening"
+    },
+    {
+      "id": "T2-F19-02",
+      "tier": 2,
+      "dag_level": "L6",
+      "feature": "F19",
+      "feature_name": "Final Verification & Tier 5 Hardening",
+      "runner": "all",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #2 for Final Verification & Tier 5 Hardening"
+    },
+    {
+      "id": "T2-F19-03",
+      "tier": 2,
+      "dag_level": "L6",
+      "feature": "F19",
+      "feature_name": "Final Verification & Tier 5 Hardening",
+      "runner": "all",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #3 for Final Verification & Tier 5 Hardening"
+    },
+    {
+      "id": "T2-F19-04",
+      "tier": 2,
+      "dag_level": "L6",
+      "feature": "F19",
+      "feature_name": "Final Verification & Tier 5 Hardening",
+      "runner": "all",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #4 for Final Verification & Tier 5 Hardening"
+    },
+    {
+      "id": "T2-F19-05",
+      "tier": 2,
+      "dag_level": "L6",
+      "feature": "F19",
+      "feature_name": "Final Verification & Tier 5 Hardening",
+      "runner": "all",
+      "category": "boundary_edge",
+      "assertion": "Boundary value & adversarial edge check #5 for Final Verification & Tier 5 Hardening"
+    },
+    {
+      "id": "T3-01",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F05",
+        "F06"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Osc modes x 9-voice Unison stereo width"
+    },
+    {
+      "id": "T3-02",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F05",
+        "F07"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Osc FM/SawPWM x Dual Filter PAR/Serial"
+    },
+    {
+      "id": "T3-03",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F06",
+        "F07"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Osc filter balance 1<->2 x Filter LINK"
+    },
+    {
+      "id": "T3-04",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F08",
+        "F09"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Mono/Legato Glide x 6-Stage Envelopes"
+    },
+    {
+      "id": "T3-05",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F09",
+        "F12"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "ENV direct slots x 15-slot Mod Matrix"
+    },
+    {
+      "id": "T3-06",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F10",
+        "F13"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "LFO/Stepper voice-to-global FX modulation"
+    },
+    {
+      "id": "T3-07",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F08",
+        "F11"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Arpeggiator x Voice Allocator & Microtuning"
+    },
+    {
+      "id": "T3-08",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F10",
+        "F11"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Host BPM Sync across LFO, Stepper, and Arp"
+    },
+    {
+      "id": "T3-09",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F12",
+        "F14"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Macro 1-4 modulation x Master X-Comp/EQ"
+    },
+    {
+      "id": "T3-10",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F13",
+        "F14"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Full 5-FX chain x Master Warm/Soft/Boost + Limiter"
+    },
+    {
+      "id": "T3-11",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F02",
+        "F03"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Preset load/save x Nested Param state restore"
+    },
+    {
+      "id": "T3-12",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F03",
+        "F18"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Undo/Redo stack across factory & user presets"
+    },
+    {
+      "id": "T3-13",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F04",
+        "F16"
+      ],
+      "runner": "ui_judge",
+      "category": "pairwise_interaction",
+      "assertion": "Live Monitor keyboard audition -> SharedUiState"
+    },
+    {
+      "id": "T3-14",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F15",
+        "F16"
+      ],
+      "runner": "ui_judge",
+      "category": "pairwise_interaction",
+      "assertion": "P5 theme tokens x custom 270-deg knobs & cards"
+    },
+    {
+      "id": "T3-15",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F03",
+        "F16"
+      ],
+      "runner": "ui_judge",
+      "category": "pairwise_interaction",
+      "assertion": "Preset browser & 3-tab UI switching"
+    },
+    {
+      "id": "T3-16",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F01",
+        "F17"
+      ],
+      "runner": "updater",
+      "category": "pairwise_interaction",
+      "assertion": "Bundled .vst3 + .exe dual hot-swap update"
+    },
+    {
+      "id": "T3-17",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F04",
+        "F16",
+        "F17"
+      ],
+      "runner": "updater",
+      "category": "pairwise_interaction",
+      "assertion": "Non-blocking updater pill inside live UI"
+    },
+    {
+      "id": "T3-18",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F17",
+        "F18"
+      ],
+      "runner": "updater",
+      "category": "pairwise_interaction",
+      "assertion": "Offline/404/corrupt-SHA rollback + stale cleansing"
+    },
+    {
+      "id": "T3-19",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F04",
+        "F08"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "16-voice polyphony -> active voice & peak atomics"
+    },
+    {
+      "id": "T3-20",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F05",
+        "F12"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Mod Matrix targeting Osc CtrlA/CtrlB/WT Mix"
+    },
+    {
+      "id": "T3-21",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F06",
+        "F07",
+        "F09"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "Unison supersaw -> Acido filter -> ENV2 cutoff sweep"
+    },
+    {
+      "id": "T3-22",
+      "tier": 3,
+      "dag_level": "L5",
+      "features": [
+        "F03",
+        "F13"
+      ],
+      "runner": "audio",
+      "category": "pairwise_interaction",
+      "assertion": "All 9 factory presets with FX rack active/muted"
+    },
+    {
+      "id": "T4-01",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F05",
+        "F06",
+        "F07",
+        "F09",
+        "F11",
+        "F13",
+        "F14"
+      ],
+      "runner": "audio",
+      "category": "real_world_scenario",
+      "assertion": "Supersaw Trance Lead"
+    },
+    {
+      "id": "T4-02",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F05",
+        "F07",
+        "F08",
+        "F09",
+        "F13",
+        "F14"
+      ],
+      "runner": "audio",
+      "category": "real_world_scenario",
+      "assertion": "Acid 303-Style Bassline"
+    },
+    {
+      "id": "T4-03",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F05",
+        "F06",
+        "F07",
+        "F08",
+        "F09",
+        "F10",
+        "F13",
+        "F14"
+      ],
+      "runner": "audio",
+      "category": "real_world_scenario",
+      "assertion": "Lush 4-Osc Cinematic Pad"
+    },
+    {
+      "id": "T4-04",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F05",
+        "F09",
+        "F10",
+        "F13",
+        "F14"
+      ],
+      "runner": "audio",
+      "category": "real_world_scenario",
+      "assertion": "Polyphonic Pluck & Stepper Sequence"
+    },
+    {
+      "id": "T4-05",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F01",
+        "F02",
+        "F03",
+        "F07",
+        "F12",
+        "F18"
+      ],
+      "runner": "audio",
+      "category": "real_world_scenario",
+      "assertion": "Full Production Session: Preset Switch + Automation + Render"
+    },
+    {
+      "id": "T4-06",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F01",
+        "F05",
+        "F08",
+        "F17",
+        "F18"
+      ],
+      "runner": "updater",
+      "category": "real_world_scenario",
+      "assertion": "First-Launch GitHub Update + Hot-Swap Cleanse + Audio Render"
+    },
+    {
+      "id": "T4-07",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F04",
+        "F08",
+        "F15",
+        "F16",
+        "F17"
+      ],
+      "runner": "ui_judge",
+      "category": "real_world_scenario",
+      "assertion": "Offline Studio Launch + 16-Voice Chord + UI Visual Audit"
+    },
+    {
+      "id": "T4-08",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F01",
+        "F06",
+        "F10",
+        "F11",
+        "F13",
+        "F18"
+      ],
+      "runner": "audio",
+      "category": "real_world_scenario",
+      "assertion": "Multi-Rate / Multi-Buffer Studio Bounce (44.1k/48k/96k)"
+    },
+    {
+      "id": "T4-09",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F03",
+        "F04",
+        "F12",
+        "F13",
+        "F14",
+        "F16"
+      ],
+      "runner": "audio",
+      "category": "real_world_scenario",
+      "assertion": "Standalone Live Audition + MIDI Learn + User Preset Workflow"
+    },
+    {
+      "id": "T4-10",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F01",
+        "F02",
+        "F03",
+        "F18"
+      ],
+      "runner": "pluginval",
+      "category": "real_world_scenario",
+      "assertion": "Strict pluginval Validation Suite (--strictness-level 5)"
+    },
+    {
+      "id": "T4-11",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F15",
+        "F16",
+        "F18"
+      ],
+      "runner": "ui_judge",
+      "category": "real_world_scenario",
+      "assertion": "Side-by-Side Visual Judge Audit vs Pic 2 (Phantom Voicer)"
+    },
+    {
+      "id": "T4-12",
+      "tier": 4,
+      "dag_level": "L6",
+      "features": [
+        "F03",
+        "F08",
+        "F17"
+      ],
+      "runner": "updater",
+      "category": "real_world_scenario",
+      "assertion": "Corrupt Update Rollback Safety + Immediate Music Session"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+[workspace]
+members = ["xtask"]
+
+[package]
+name = "phantom_spire"
+version = "0.1.0"
+edition = "2021"
+authors = ["Endio"]
+license = "ISC"
+description = "Persona 5 inspired Spire-style polyphonic synthesizer VST3 and Standalone"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "phantom_spire"
+path = "src/main.rs"
+
+[dependencies]
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "de421011f41a6d10fc8c7a6084e4f4dee0143683", features = ["standalone"] }
+nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "de421011f41a6d10fc8c7a6084e4f4dee0143683" }
+egui_glow = "0.31.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[profile.release]
+lto = "thin"
+strip = "symbols"
+
+[profile.profiling]
+inherits = "release"
+debug = true
+strip = "none"

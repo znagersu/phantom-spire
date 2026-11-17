@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.2.0)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Determine release tag
+        id: meta
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $tag = "${{ inputs.tag }}"
+          } else {
+            $tag = "${{ github.ref_name }}"
+          }
+          $ver = $tag.Trim().TrimStart('v', 'V')
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "version=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.meta.outputs.tag }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable-x86_64-pc-windows-gnu
+
+      - name: Run library & updater tests
+        run: |
+          cargo test --lib
+          cargo test --test updater_tests
+
+      - name: Bundle VST3 and Standalone EXE
+        run: cargo xtask bundle phantom_spire --release
+
+      - name: Package, hash, and generate latest.json
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $tag = "${{ steps.meta.outputs.tag }}"
+          $ver = "${{ steps.meta.outputs.version }}"
+          $repo = "${{ github.repository }}"
+
+          $vst3Bundle = "target/bundled/phantom_spire.vst3"
+          $vst3Binary = "target/bundled/phantom_spire.vst3/Contents/x86_64-win/phantom_spire.vst3"
+          $exeBinary  = "target/bundled/phantom_spire.exe"
+          $clapBinary = "target/bundled/phantom_spire.clap"
+
+          if (-not (Test-Path $vst3Binary)) { throw "Missing $vst3Binary" }
+          if (-not (Test-Path $exeBinary))  { throw "Missing $exeBinary" }
+
+          New-Item -ItemType Directory -Force -Path release-staging | Out-Null
+
+          $zipName = "PhantomSpire-win64.zip"
+          $zipPath = "release-staging/$zipName"
+          $shaPath = "release-staging/$zipName.sha256"
+
+          $items = @($vst3Bundle, $exeBinary)
+          if (Test-Path $clapBinary) { $items += $clapBinary }
+          Compress-Archive -Path $items -DestinationPath $zipPath -Force
+
+          $zipHash  = (Get-FileHash -Algorithm SHA256 -Path $zipPath).Hash.ToLowerInvariant()
+          $vst3Hash = (Get-FileHash -Algorithm SHA256 -Path $vst3Binary).Hash.ToLowerInvariant()
+          $exeHash  = (Get-FileHash -Algorithm SHA256 -Path $exeBinary).Hash.ToLowerInvariant()
+
+          [System.IO.File]::WriteAllText(
+            $shaPath,
+            "$zipHash  $zipName`n",
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+          $manifest = [ordered]@{
+            version      = $ver
+            zip_url      = "https://github.com/$repo/releases/download/$tag/$zipName"
+            sha256       = $zipHash
+            vst3_sha256  = $vst3Hash
+            exe_sha256   = $exeHash
+            published_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+          } | ConvertTo-Json -Depth 4
+
+          [System.IO.File]::WriteAllText(
+            "release-staging/latest.json",
+            $manifest,
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+      - name: Upload assets to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: "Phantom Spire ${{ steps.meta.outputs.tag }}"
+          files: |
+            release-staging/PhantomSpire-win64.zip
+            release-staging/PhantomSpire-win64.zip.sha256
+            release-staging/latest.json
