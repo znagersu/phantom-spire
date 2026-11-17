@@ -62,6 +62,7 @@ struct EditorUiState {
     mod_page: ModPageState,
     midi_learn_armed: bool,
     midi_learn_status: Option<String>,
+    last_updater_msg: Option<String>,
     // Automated screenshot capture support (PHANTOM_SPIRE_SCREENSHOT_OUT)
     screenshot_out: Option<PathBuf>,
     screenshot_frames: u32,
@@ -81,6 +82,7 @@ impl Default for EditorUiState {
             mod_page: ModPageState::default(),
             midi_learn_armed: false,
             midi_learn_status: None,
+            last_updater_msg: None,
             screenshot_out: crate::env_screenshot_out(),
             screenshot_frames: 0,
             screenshot_done: Arc::new(AtomicBool::new(false)),
@@ -125,18 +127,33 @@ pub fn create(
             let out_mask = ui_state.get_output_mask();
             let voices = ui_state.active_voice_count.load(Ordering::Relaxed);
             let up_status = updater.status();
+            let status_notice = match &up_status {
+                UpdateStatus::Available { version, .. } => Some(format!("UPDATE READY: v{version}")),
+                UpdateStatus::ReadyToRestart { version, .. } => {
+                    Some(format!("UPDATED -> v{version} (RESTART/RELOAD)"))
+                }
+                UpdateStatus::Error(err) => Some(format!("UPD ERR: {err}")),
+                _ => None,
+            };
+            if status_notice != state.last_updater_msg {
+                if let Some(ref msg) = status_notice {
+                    ui_state.set_last_param_label(msg);
+                }
+                state.last_updater_msg = status_notice;
+            }
 
             if in_mask != 0
                 || out_mask != 0
                 || voices > 0
                 || state.auditioning_note.is_some()
-                || matches!(
-                    up_status,
-                    UpdateStatus::Checking | UpdateStatus::Installing(_)
-                )
                 || (state.screenshot_out.is_some() && !state.screenshot_saved)
             {
                 egui_ctx.request_repaint();
+            } else if matches!(
+                up_status,
+                UpdateStatus::Checking | UpdateStatus::Installing(_)
+            ) {
+                egui_ctx.request_repaint_after(std::time::Duration::from_millis(120));
             }
 
             let mut midi_learn_slot = if state.midi_learn_armed {

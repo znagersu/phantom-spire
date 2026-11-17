@@ -455,6 +455,10 @@ impl UpdaterHandle {
         let _ = std::thread::Builder::new()
             .name(String::from("phantom-spire-update-check"))
             .spawn(move || {
+                // Sweep any unlocked trash folders left behind by a prior hot-swap session
+                let extra_roots = collect_extra_cleanup_roots(&config);
+                let _ = cleanup_trash_artifacts(&config.temp_dir, &extra_roots);
+
                 let (next_status, manifest) = Self::check_with_config_detailed(&config);
                 if let Some(m) = manifest {
                     if let Ok(mut mg) = last_manifest.lock() {
@@ -465,6 +469,26 @@ impl UpdaterHandle {
                     *sg = next_status;
                 }
             });
+    }
+
+    pub fn is_running_standalone() -> bool {
+        current_module_path()
+            .and_then(|p| p.extension().map(|e| e.eq_ignore_ascii_case("exe")))
+            .unwrap_or(false)
+    }
+
+    pub fn launch_canonical_standalone(&self) -> Result<(), String> {
+        let exe = &self.config.canonical_exe_path;
+        if !exe.is_file() {
+            return Err(format!(
+                "Updated standalone binary not found at '{}'",
+                exe.display()
+            ));
+        }
+        Command::new(exe)
+            .spawn()
+            .map_err(|e| format!("Failed to launch '{}': {e}", exe.display()))?;
+        Ok(())
     }
 
     /// Spawns a non-blocking background thread to download, verify, hot-swap install, and cleanse.
@@ -1113,19 +1137,25 @@ fn fetch_manifest_with_config(config: &UpdaterConfig) -> Result<LatestManifest, 
     let max_time = config.http_timeout_secs.max(1);
     let connect_timeout = max_time.min(5);
 
+    let mut args = vec![
+        String::from("-fsSL"),
+        String::from("-H"),
+        String::from("Cache-Control: no-cache"),
+        String::from("-H"),
+        String::from("Pragma: no-cache"),
+        String::from("--connect-timeout"),
+        connect_timeout.to_string(),
+        String::from("--max-time"),
+        max_time.to_string(),
+    ];
+    #[cfg(target_os = "windows")]
+    if manifest_url.starts_with("https://") {
+        args.push(String::from("--ssl-no-revoke"));
+    }
+    args.push(busted);
+
     let output = hidden_command("curl.exe")
-        .args([
-            "-fsSL",
-            "-H",
-            "Cache-Control: no-cache",
-            "-H",
-            "Pragma: no-cache",
-            "--connect-timeout",
-            &connect_timeout.to_string(),
-            "--max-time",
-            &max_time.to_string(),
-            &busted,
-        ])
+        .args(&args)
         .output()
         .map_err(|e| format!("Failed to invoke curl.exe: {e}"))?;
 
@@ -1155,20 +1185,26 @@ fn download_file_to(config: &UpdaterConfig, url: &str, dest_path: &Path) -> Resu
     };
     let connect_timeout = base_timeout.min(5);
 
+    let mut args = vec![
+        String::from("-fsSL"),
+        String::from("-L"),
+        String::from("-H"),
+        String::from("Cache-Control: no-cache"),
+        String::from("--connect-timeout"),
+        connect_timeout.to_string(),
+        String::from("--max-time"),
+        download_timeout.to_string(),
+        String::from("-o"),
+        dest_path.to_string_lossy().into_owned(),
+    ];
+    #[cfg(target_os = "windows")]
+    if url.trim().starts_with("https://") {
+        args.push(String::from("--ssl-no-revoke"));
+    }
+    args.push(busted);
+
     let output = hidden_command("curl.exe")
-        .args([
-            "-fsSL",
-            "-L",
-            "-H",
-            "Cache-Control: no-cache",
-            "--connect-timeout",
-            &connect_timeout.to_string(),
-            "--max-time",
-            &download_timeout.to_string(),
-            "-o",
-            &dest_path.to_string_lossy(),
-            &busted,
-        ])
+        .args(&args)
         .output()
         .map_err(|e| format!("Failed to invoke curl.exe for download: {e}"))?;
 
@@ -1395,7 +1431,6 @@ fn is_dir_writable(dir: &Path) -> bool {
 
 struct TempDirGuard {
     path: PathBuf,
-    disarmed: bool,
 }
 
 impl TempDirGuard {
@@ -1405,24 +1440,17 @@ impl TempDirGuard {
         let path = base.join(format!("{prefix}{}", unique_nonce()));
         fs::create_dir_all(&path)
             .map_err(|e| format!("Failed to create staging dir '{}': {e}", path.display()))?;
-        Ok(Self {
-            path,
-            disarmed: false,
-        })
+        Ok(Self { path })
     }
 
     fn path(&self) -> &Path {
         &self.path
     }
-
-    fn disarm(&mut self) {
-        self.disarmed = true;
-    }
 }
 
 impl Drop for TempDirGuard {
     fn drop(&mut self) {
-        if !self.disarmed && self.path.exists() {
+        if self.path.exists() {
             let _ = fs::remove_dir_all(&self.path);
         }
     }
@@ -1433,6 +1461,20 @@ impl Drop for TempDirGuard {
 /// leftovers in `extra_roots`.
 /// Returns `(removed_count, deferred_locked_count)`.
 pub fn cleanup_temp_artifacts(temp_dir: &Path, extra_roots: &[PathBuf]) -> (usize, usize) {
+    cleanup_temp_artifacts_filtered(temp_dir, extra_roots, true)
+}
+
+/// Sweeps only hot-swap trash directories (`PhantomSpireTrash-*` / `.PhantomSpireTrash-*`)
+/// without disturbing any in-flight `PhantomSpireUpdate-*` or `PhantomSpireCleanse-*` staging dirs.
+pub fn cleanup_trash_artifacts(temp_dir: &Path, extra_roots: &[PathBuf]) -> (usize, usize) {
+    cleanup_temp_artifacts_filtered(temp_dir, extra_roots, false)
+}
+
+fn cleanup_temp_artifacts_filtered(
+    temp_dir: &Path,
+    extra_roots: &[PathBuf],
+    include_staging: bool,
+) -> (usize, usize) {
     let mut removed = 0usize;
     let mut deferred_locked = 0usize;
 
@@ -1443,10 +1485,10 @@ pub fn cleanup_temp_artifacts(temp_dir: &Path, extra_roots: &[PathBuf]) -> (usiz
                 continue;
             };
             let lower = name.to_ascii_lowercase();
-            let is_managed = lower.starts_with(&UPDATE_TEMP_PREFIX.to_ascii_lowercase())
-                || lower.starts_with(&CLEANSE_TEMP_PREFIX.to_ascii_lowercase())
-                || lower.starts_with(&TRASH_TEMP_PREFIX.to_ascii_lowercase());
-            if !is_managed {
+            let is_trash = lower.starts_with(&TRASH_TEMP_PREFIX.to_ascii_lowercase());
+            let is_staging = lower.starts_with(&UPDATE_TEMP_PREFIX.to_ascii_lowercase())
+                || lower.starts_with(&CLEANSE_TEMP_PREFIX.to_ascii_lowercase());
+            if !(is_trash || (include_staging && is_staging)) {
                 continue;
             }
             if try_remove_path_completely(&p) {
@@ -1472,7 +1514,9 @@ pub fn cleanup_temp_artifacts(temp_dir: &Path, extra_roots: &[PathBuf]) -> (usiz
                 };
                 let lower = name.to_ascii_lowercase();
                 let is_local_temp = lower.starts_with(&LOCAL_TRASH_PREFIX.to_ascii_lowercase())
-                    || (lower.starts_with(STAGING_ENTRY_PREFIX) && lower.contains(".new-"));
+                    || (include_staging
+                        && lower.starts_with(STAGING_ENTRY_PREFIX)
+                        && lower.contains(".new-"));
                 if !is_local_temp {
                     continue;
                 }
@@ -1706,9 +1750,13 @@ fn scan_dir_for_stale(
         }
 
         if ft.is_dir() {
-            // Skip VCS / hidden trash folders during stale scan
+            // Skip VCS / build / hidden trash folders during stale scan
             if lower == ".git"
                 || lower == "node_modules"
+                || lower == "target"
+                || lower == ".cargo"
+                || lower == "release-staging"
+                || lower == "e2e"
                 || lower.starts_with(&LOCAL_TRASH_PREFIX.to_ascii_lowercase())
             {
                 continue;
@@ -1873,12 +1921,88 @@ fn collect_extra_cleanup_roots(config: &UpdaterConfig) -> Vec<PathBuf> {
     roots
 }
 
+fn canonical_vst3_is_healthy(config: &UpdaterConfig) -> bool {
+    let dll = config
+        .canonical_vst3_dir
+        .join("Contents")
+        .join("x86_64-win")
+        .join("phantom_spire.vst3");
+    dll.is_file() && fs::metadata(&dll).map(|m| m.len()).unwrap_or(0) > 0
+}
+
+fn canonical_exe_is_healthy(config: &UpdaterConfig) -> bool {
+    config.canonical_exe_path.is_file()
+        && fs::metadata(&config.canonical_exe_path)
+            .map(|m| m.len())
+            .unwrap_or(0)
+            > 0
+}
+
+fn find_seed_vst3_bundle(discovery: &StaleDiscovery) -> Option<PathBuf> {
+    if let Ok((active, _)) = detect_active_target() {
+        let is_named_vst3 = active
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.eq_ignore_ascii_case("phantom_spire.vst3"))
+            .unwrap_or(false);
+        let dll = active
+            .join("Contents")
+            .join("x86_64-win")
+            .join("phantom_spire.vst3");
+        if is_named_vst3 && active.is_dir() && dll.is_file() {
+            return Some(active);
+        }
+    }
+    for cand in &discovery.stale_vst3 {
+        let dll = cand
+            .join("Contents")
+            .join("x86_64-win")
+            .join("phantom_spire.vst3");
+        if cand.is_dir() && dll.is_file() {
+            return Some(cand.clone());
+        }
+    }
+    None
+}
+
+fn find_seed_exe_file(discovery: &StaleDiscovery) -> Option<PathBuf> {
+    if let Ok((active, _)) = detect_active_target() {
+        let is_named_exe = active
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.eq_ignore_ascii_case("phantom_spire.exe"))
+            .unwrap_or(false);
+        if is_named_exe && active.is_file() {
+            return Some(active);
+        }
+    }
+    for cand in &discovery.stale_exe {
+        if cand.is_file() {
+            return Some(cand.clone());
+        }
+    }
+    None
+}
+
 fn run_cleanse_internal(
     config: &UpdaterConfig,
     allow_uac_elevation: bool,
 ) -> Result<CleanseReport, String> {
     let discovery = discover_stale_copies(config);
     let stale_paths = discovery.all_paths();
+
+    // Never wipe the user's only copy if canonical paths haven't been created yet:
+    // identify any seed VST3/EXE we should copy into canonical location first.
+    let seed_vst3 = if !canonical_vst3_is_healthy(config) {
+        find_seed_vst3_bundle(&discovery)
+    } else {
+        None
+    };
+    let seed_exe = if !canonical_exe_is_healthy(config) {
+        find_seed_exe_file(&discovery)
+    } else {
+        None
+    };
 
     // Check if any target parent directory requires elevation
     let mut unwritable: Vec<PathBuf> = Vec::new();
@@ -1889,17 +2013,48 @@ fn run_cleanse_internal(
             }
         }
     }
+    if seed_vst3.is_some() {
+        if let Some(parent) = config.canonical_vst3_dir.parent() {
+            if !is_dir_writable(parent) {
+                unwritable.push(config.canonical_vst3_dir.clone());
+            }
+        }
+    }
+    if seed_exe.is_some() {
+        if let Some(parent) = config.canonical_exe_path.parent() {
+            if !is_dir_writable(parent) {
+                unwritable.push(config.canonical_exe_path.clone());
+            }
+        }
+    }
 
     if !unwritable.is_empty() {
         if allow_uac_elevation && !config.silent_mode {
-            let mut stage_guard = TempDirGuard::create(&config.temp_dir, CLEANSE_TEMP_PREFIX)?;
-            spawn_elevated_updater_script(config, &config.current_version, stage_guard.path(), true)?;
-            stage_guard.disarm();
+            let stage_guard = TempDirGuard::create(&config.temp_dir, CLEANSE_TEMP_PREFIX)?;
+            let has_staged_seed = seed_vst3.is_some() || seed_exe.is_some();
+            if let Some(ref src_vst3) = seed_vst3 {
+                let dst = stage_guard.path().join("phantom_spire.vst3");
+                copy_dir_recursive(src_vst3, &dst)?;
+            }
+            if let Some(ref src_exe) = seed_exe {
+                let dst = stage_guard.path().join("phantom_spire.exe");
+                fs::copy(src_exe, &dst)
+                    .map_err(|e| format!("Failed to stage active EXE for cleanse: {e}"))?;
+            }
+            spawn_elevated_updater_script(
+                config,
+                &config.current_version,
+                stage_guard.path(),
+                !has_staged_seed,
+            )?;
+            drop(stage_guard);
+            let extra_roots = collect_extra_cleanup_roots(config);
+            let (temp_removed, deferred_locked) = cleanup_temp_artifacts(&config.temp_dir, &extra_roots);
             return Ok(CleanseReport {
                 stale_removed: stale_paths.len(),
                 stale_hot_swapped: 0,
-                temp_artifacts_removed: 0,
-                deferred_locked_trash: 0,
+                temp_artifacts_removed: temp_removed,
+                deferred_locked_trash: deferred_locked,
                 removed_paths: stale_paths,
             });
         }
@@ -1907,6 +2062,22 @@ fn run_cleanse_internal(
             "Directory not writable (elevation disabled): {}",
             unwritable[0].display()
         ));
+    }
+
+    // Seed missing canonical install(s) BEFORE removing stale copies
+    if let Some(ref src_vst3) = seed_vst3 {
+        let dll = src_vst3
+            .join("Contents")
+            .join("x86_64-win")
+            .join("phantom_spire.vst3");
+        if let Ok(hash) = sha256_file(&dll) {
+            let _ = install_vst3_bundle_atomic(src_vst3, &hash, config)?;
+        }
+    }
+    if let Some(ref src_exe) = seed_exe {
+        if let Ok(hash) = sha256_file(src_exe) {
+            let _ = install_exe_atomic(src_exe, &hash, config)?;
+        }
     }
 
     let mut report = CleanseReport::default();
@@ -2393,7 +2564,7 @@ fn apply_update_from_zip_internal(
     }
 
     // Step 2: Extract into RAII-guarded temp staging dir
-    let mut extract_guard = TempDirGuard::create(&config.temp_dir, UPDATE_TEMP_PREFIX)?;
+    let extract_guard = TempDirGuard::create(&config.temp_dir, UPDATE_TEMP_PREFIX)?;
     let extract_dir = extract_guard.path().join("extracted");
     extract_zip_archive(zip_path, &extract_dir)?;
 
@@ -2444,10 +2615,12 @@ fn apply_update_from_zip_internal(
     if needs_elevation {
         if allow_uac_elevation && !config.silent_mode {
             spawn_elevated_updater_script(config, version, &extract_dir, false)?;
-            extract_guard.disarm();
+            drop(extract_guard);
             return Ok(UpdateStatus::ReadyToRestart {
                 version: version.to_string(),
-                message: format!("Elevated updater launched for v{version}"),
+                message: format!(
+                    "Updated to v{version} (elevated install & cleanse complete). Reload plugin or restart Standalone."
+                ),
             });
         }
         return Err(String::from(
@@ -2542,11 +2715,14 @@ try {{
     $roots = @({roots_ps}) | Where-Object {{ $_ -and (Test-Path $_) }} | Select-Object -Unique
 
     if (-not $Elevated) {{
-        Start-Process powershell.exe -Verb RunAs -WindowStyle Hidden -ArgumentList @(
-            '-NoProfile', '-ExecutionPolicy', 'Bypass',
-            '-File', ('"{{0}}"' -f $PSCommandPath), '-Elevated'
-        )
-        exit 0
+        try {{
+            $p = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ArgumentList (
+                '-NoProfile -ExecutionPolicy Bypass -File "{{0}}" -Elevated' -f $PSCommandPath
+            )
+            exit $p.ExitCode
+        }} catch {{
+            exit 2
+        }}
     }}
 
     $trashRoot = Join-Path $tempBase ('PhantomSpireTrash-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -2566,8 +2742,24 @@ try {{
                 $alt
             }}
             $destName = (Split-Path $targetPath -Leaf) + '.' + [guid]::NewGuid().ToString('N').Substring(0, 6)
-            Move-Item -Path $targetPath -Destination (Join-Path $destDir $destName) -Force -ErrorAction Stop
-            return $true
+            try {{
+                Move-Item -Path $targetPath -Destination (Join-Path $destDir $destName) -Force -ErrorAction Stop
+                return $true
+            }} catch {{
+                if (Test-Path $targetPath -PathType Container) {{
+                    Get-ChildItem -Path $targetPath -File -Recurse -ErrorAction SilentlyContinue | ForEach-Object {{
+                        $childDest = Join-Path $destDir ($_.Name + '.' + [guid]::NewGuid().ToString('N').Substring(0, 6))
+                        try {{
+                            Remove-Item -Force $_.FullName -ErrorAction Stop
+                        }} catch {{
+                            Move-Item -Path $_.FullName -Destination $childDest -Force -ErrorAction Stop
+                        }}
+                    }}
+                    Remove-Item -Recurse -Force $targetPath -ErrorAction Stop
+                    return $true
+                }}
+                throw
+            }}
         }}
     }}
 
@@ -2579,9 +2771,14 @@ try {{
             $canonParent = Split-Path $canonicalVst3 -Parent
             New-Item -ItemType Directory -Force -Path $canonParent | Out-Null
             if (Test-Path $canonicalVst3) {{ [void](Remove-OrMoveLocked $canonicalVst3) }}
-            Copy-Item -Recurse -Force $srcVst3 $canonicalVst3
+            $stageVst3 = Join-Path $canonParent ('.phantom_spire.vst3.new-' + [guid]::NewGuid().ToString('N').Substring(0, 6))
+            if (Test-Path $stageVst3) {{ Remove-Item -Recurse -Force $stageVst3 }}
+            Copy-Item -Recurse -Force $srcVst3 $stageVst3
+            Rename-Item -Path $stageVst3 -NewName (Split-Path $canonicalVst3 -Leaf)
+            $nested = Join-Path $canonicalVst3 'phantom_spire.vst3'
+            if (Test-Path $nested) {{ [void](Remove-OrMoveLocked $nested) }}
             $dstDll = Join-Path $canonicalVst3 'Contents\x86_64-win\phantom_spire.vst3'
-            if ((Get-FileHash $dstDll).Hash -ne $expectedHash) {{ throw "SHA-256 failed for $dstDll" }}
+            if (-not (Test-Path $dstDll) -or ((Get-FileHash $dstDll).Hash -ne $expectedHash)) {{ throw "SHA-256 failed for $dstDll" }}
         }}
         if (Test-Path $srcExe) {{
             $expectedExeHash = (Get-FileHash $srcExe).Hash
@@ -2593,13 +2790,18 @@ try {{
         }}
     }}
 
+    $canonDll = Join-Path $canonicalVst3 'Contents\x86_64-win\phantom_spire.vst3'
     $cleansed = 0
     foreach ($root in $roots) {{
-        Get-ChildItem -Path $root -Filter 'phantom_spire.vst3' -Directory -Recurse -Depth 5 -ErrorAction SilentlyContinue | ForEach-Object {{
-            if (-not $_.FullName.Equals($canonicalVst3, [StringComparison]::OrdinalIgnoreCase)) {{
-                if (Remove-OrMoveLocked $_.FullName) {{ $cleansed++ }}
+        Get-ChildItem -Path $root -Filter 'phantom_spire.vst3' -Recurse -Depth 5 -ErrorAction SilentlyContinue | ForEach-Object {{
+            $full = $_.FullName
+            if ($full.Equals($canonDll, [StringComparison]::OrdinalIgnoreCase)) {{
+                return
+            }}
+            if (-not $full.Equals($canonicalVst3, [StringComparison]::OrdinalIgnoreCase)) {{
+                if (Remove-OrMoveLocked $full) {{ $cleansed++ }}
             }} else {{
-                $nested = Join-Path $_.FullName 'phantom_spire.vst3'
+                $nested = Join-Path $full 'phantom_spire.vst3'
                 if (Test-Path $nested) {{ if (Remove-OrMoveLocked $nested) {{ $cleansed++ }} }}
             }}
         }}
@@ -2616,13 +2818,11 @@ try {{
         }}
     }}
 
-    # Clean up all temporary staging/cleanse/trash artifacts
+    # Clean up unlocked temporary trash folders
     Get-ChildItem -Path $tempBase -Directory -ErrorAction SilentlyContinue | Where-Object {{
-        $_.Name -like 'PhantomSpireUpdate-*' -or $_.Name -like 'PhantomSpireCleanse-*' -or $_.Name -like 'PhantomSpireTrash-*'
+        $_.Name -like 'PhantomSpireTrash-*'
     }} | ForEach-Object {{
-        if (-not $_.FullName.Equals((Split-Path $PSCommandPath -Parent), [StringComparison]::OrdinalIgnoreCase)) {{
-            Remove-Item -Recurse -Force $_.FullName -ErrorAction SilentlyContinue
-        }}
+        Remove-Item -Recurse -Force $_.FullName -ErrorAction SilentlyContinue
     }}
 
     if (-not $silent) {{
@@ -2634,10 +2834,6 @@ try {{
             [System.Windows.Forms.MessageBoxIcon]::Information
         ) | Out-Null
     }}
-
-    # Schedule self-removal of our own script staging folder
-    $selfDir = Split-Path $PSCommandPath -Parent
-    Start-Process cmd.exe -WindowStyle Hidden -ArgumentList "/c ping -n 2 127.0.0.1 >nul & rmdir /s /q `"$selfDir`""
 }} catch {{
     if (-not {silent_flag}) {{
         [System.Windows.Forms.MessageBox]::Show(
@@ -2668,8 +2864,21 @@ try {{
         "-File",
         &script_path.to_string_lossy(),
     ]);
-    cmd.spawn()
+    let output = cmd
+        .output()
         .map_err(|e| format!("Failed to launch elevated updater: {e}"))?;
+    if !output.status.success() {
+        let code = output.status.code().unwrap_or(1);
+        if code == 2 {
+            return Err(String::from("Administrator permission was canceled"));
+        }
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        return Err(if stderr.is_empty() {
+            format!("Elevated updater exited with status {code}")
+        } else {
+            format!("Elevated updater failed: {stderr}")
+        });
+    }
     Ok(())
 }
 

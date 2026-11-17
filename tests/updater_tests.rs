@@ -1014,3 +1014,75 @@ fn test_apply_update_from_zip_for_test_helper() {
     assert_eq!(fs::read(&sb.canon_exe_path).unwrap(), b"DIRECT_EXE");
     assert!(sb.managed_temp_entries().is_empty());
 }
+
+#[test]
+fn test_cleanse_seeds_missing_canonical_before_removing_stale() {
+    let sb = TestSandbox::new("cleanse_seeds_canon");
+    // Do NOT create canonical VST3/EXE first — simulate a user running from Downloads only
+    let dl_vst3 = sb.scan_root_a.join("phantom_spire.vst3");
+    let dl_dll = dl_vst3
+        .join("Contents")
+        .join("x86_64-win")
+        .join("phantom_spire.vst3");
+    fs::create_dir_all(dl_dll.parent().unwrap()).unwrap();
+    fs::write(&dl_dll, b"SEED_VST3_BYTES").unwrap();
+
+    let dl_exe = sb.scan_root_a.join("phantom_spire.exe");
+    fs::write(&dl_exe, b"SEED_EXE_BYTES").unwrap();
+
+    let cfg = sb.config("http://127.0.0.1:1", "0.2.0");
+    let report = cleanse_with_config(&cfg).expect("cleanse should succeed and seed canonical");
+    assert!(report.stale_removed >= 2);
+
+    assert!(!dl_vst3.exists(), "Downloads VST3 copy should be cleansed");
+    assert!(!dl_exe.exists(), "Downloads EXE copy should be cleansed");
+    assert!(
+        fs::read(sb.canonical_vst3_dll()).unwrap() == b"SEED_VST3_BYTES",
+        "canonical VST3 must be seeded before removing the stale copy"
+    );
+    assert!(
+        fs::read(&sb.canon_exe_path).unwrap() == b"SEED_EXE_BYTES",
+        "canonical EXE must be seeded before removing the stale copy"
+    );
+    assert_eq!(count_stale_copies(&cfg), 0);
+}
+
+#[test]
+fn test_check_async_sweeps_stale_trash_without_touching_active_staging() {
+    let sb = TestSandbox::new("check_async_sweeps_trash");
+    let leftover_trash = sb.temp_dir.join("PhantomSpireTrash-old123");
+    let active_stage = sb.temp_dir.join("PhantomSpireUpdate-inflight");
+    fs::create_dir_all(&leftover_trash).unwrap();
+    fs::create_dir_all(&active_stage).unwrap();
+    fs::write(leftover_trash.join("old.dll"), b"stale").unwrap();
+    fs::write(active_stage.join("stage.zip"), b"active").unwrap();
+
+    let mut routes = HashMap::new();
+    routes.insert(
+        "/latest.json".to_string(),
+        MockResponse::ok_json(r#"{"version":"0.2.0","zip_url":"http://127.0.0.1:1/x.zip"}"#),
+    );
+    let server = MockGitHubServer::start(routes);
+
+    let mut cfg = sb.config(&server.url("/latest.json"), "0.2.0");
+    cfg.trusted_url_prefix = "http://127.0.0.1:1/".to_string();
+    let handle = UpdaterHandle::new(cfg);
+    handle.check_async();
+
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < deadline {
+        if !matches!(handle.status(), UpdateStatus::Idle | UpdateStatus::Checking) {
+            break;
+        }
+        thread::sleep(Duration::from_millis(20));
+    }
+
+    assert!(
+        !leftover_trash.exists(),
+        "check_async must sweep unlocked PhantomSpireTrash-* directories"
+    );
+    assert!(
+        active_stage.exists(),
+        "check_async must not disturb PhantomSpireUpdate-* staging directories"
+    );
+}

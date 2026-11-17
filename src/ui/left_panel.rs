@@ -439,9 +439,11 @@ pub fn draw_left_command_zone(
                 Recheck,
                 Install,
                 Cleanse,
+                RestartOrNotify,
             }
 
             let cur_ver = env!("CARGO_PKG_VERSION");
+            let is_standalone = UpdaterHandle::is_running_standalone();
             let (up_label, up_fg, up_rim, action, hover_tip): (
                 String,
                 Color32,
@@ -502,16 +504,20 @@ pub fn draw_left_command_zone(
                     Some(msg.clone()),
                 ),
                 UpdateStatus::ReadyToRestart { version, message } => (
-                    format!("RESTART v{version}"),
+                    if is_standalone {
+                        format!("RESTART v{version}")
+                    } else {
+                        format!("RELOAD v{version}")
+                    },
                     P5_CYAN,
                     P5_CYAN,
-                    UpAction::None,
+                    UpAction::RestartOrNotify,
                     Some(message.clone()),
                 ),
                 UpdateStatus::Error(err) => (
-                    format!("v{cur_ver} (Retry)"),
-                    P5_MUTED,
-                    P5_WHITE,
+                    format!("v{cur_ver} ERR (Retry)"),
+                    P5_GOLD,
+                    P5_RED,
                     UpAction::Recheck,
                     Some(err.clone()),
                 ),
@@ -533,6 +539,18 @@ pub fn draw_left_command_zone(
                     }
                     UpAction::Cleanse => updater.cleanse_async(),
                     UpAction::Recheck => updater.check_async(),
+                    UpAction::RestartOrNotify => {
+                        if is_standalone {
+                            match updater.launch_canonical_standalone() {
+                                Ok(()) => std::process::exit(0),
+                                Err(err) => ui_state.set_last_param_label(&err),
+                            }
+                        } else if let UpdateStatus::ReadyToRestart { version, .. } = up_status {
+                            ui_state.set_last_param_label(&format!(
+                                "Reload plugin in DAW to run v{version}"
+                            ));
+                        }
+                    }
                     UpAction::None => {}
                 }
             }
