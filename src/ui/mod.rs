@@ -2,6 +2,7 @@ pub mod fx_page;
 pub mod left_panel;
 pub mod mod_page;
 pub mod piano_strip;
+pub mod preset_browser;
 pub mod synth_page;
 pub mod theme;
 pub mod widgets;
@@ -9,11 +10,10 @@ pub mod widgets;
 use crate::params::PhantomSpireParams;
 use crate::presets::PresetManager;
 use crate::ui::fx_page::{draw_fx_page, FxPageState};
-use crate::ui::left_panel::{
-    draw_left_command_zone, render_preset_browser_modal, PresetBrowserState,
-};
+use crate::ui::left_panel::draw_left_command_zone;
 use crate::ui::mod_page::{draw_mod_page, ModPageState};
 use crate::ui::piano_strip::draw_piano_monitor;
+use crate::ui::preset_browser::{draw_preset_browser_page, PresetBrowserState};
 use crate::ui::synth_page::{draw_synth_page, SynthPageState};
 use crate::ui::theme::{
     apply_p5_style, draw_active_note_trapezoid, draw_p5_3d_text, draw_starburst_bg, font_id,
@@ -21,7 +21,8 @@ use crate::ui::theme::{
     P5_MAGENTA, P5_MUTED, P5_PANEL, P5_RED, P5_WHITE,
 };
 use crate::ui::widgets::{
-    draw_stereo_meter, p5_button, p5_enum_dropdown, p5_int_stepper, PopupOverlayState,
+    draw_stereo_meter, p5_button, p5_enum_dropdown, p5_int_stepper, p5_toggle_pill,
+    PopupOverlayState,
 };
 use crate::updater::{UpdateStatus, UpdaterHandle};
 use crate::{SharedSynthState, SharedUiState};
@@ -189,6 +190,7 @@ pub fn create(
                                 &params,
                                 &ui_state,
                                 &shared_synth,
+                                &presets,
                                 setter,
                                 state,
                                 &mut midi_learn_slot,
@@ -212,16 +214,7 @@ pub fn create(
                 state.midi_learn_status = Some(updated_learn);
             }
 
-            // Floating Custom P5 Overlays (Preset Vault Modal & Custom P5 Dropdown Popups)
-            render_preset_browser_modal(
-                egui_ctx,
-                &params,
-                &ui_state,
-                &shared_synth,
-                &presets,
-                setter,
-                &mut state.browser,
-            );
+            // Floating Custom P5 Dropdown Popups
             state.popups.render_overlay(egui_ctx);
 
             // Schedule OpenGL framebuffer read_pixels capture on Debug layer AFTER all UI layers render
@@ -238,6 +231,7 @@ fn draw_starburst_zone(
     params: &PhantomSpireParams,
     ui_state: &SharedUiState,
     shared_synth: &SharedSynthState,
+    presets: &Arc<Mutex<PresetManager>>,
     setter: &ParamSetter,
     state: &mut EditorUiState,
     midi_learn: &mut Option<String>,
@@ -283,10 +277,11 @@ fn draw_starburst_zone(
             (UiTab::FxMaster, "FX & MASTER", 126.0_f32, P5_GOLD),
             (UiTab::ModArp, "MOD & ARP", 112.0_f32, P5_MAGENTA),
         ] {
-            let is_active = state.active_tab == tab;
+            let is_active = !state.browser.open && state.active_tab == tab;
             let (tr, tresp) = ui.allocate_exact_size(Vec2::new(tab_w, 28.0), Sense::click());
             if tresp.clicked() {
                 state.active_tab = tab;
+                state.browser.open = false;
                 state.popups.active = None;
             }
             draw_p5_3d_text(
@@ -335,16 +330,16 @@ fn draw_starburst_zone(
         draw_stereo_meter(ui.painter(), meter_r, peak_l, peak_r);
     });
 
-    // Header Row 2: Poly Mode, Voice Count, MIDI Learn, BPM
+    // Header Row 2: Poly Mode, Voice Count, MIDI Learn, Project BPM Sync, SYNC ALL, BPM, ARP
     hdr_left.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 6.0;
+        ui.spacing_mut().item_spacing.x = 4.0;
 
-        let (m_lbl, _) = ui.allocate_exact_size(Vec2::new(38.0, 22.0), Sense::hover());
+        let (m_lbl, _) = ui.allocate_exact_size(Vec2::new(34.0, 22.0), Sense::hover());
         ui.painter().text(
             Pos2::new(m_lbl.left(), m_lbl.center().y),
             egui::Align2::LEFT_CENTER,
             "MODE",
-            font_id(10.0, FONT_IMPACT),
+            font_id(9.5, FONT_IMPACT),
             P5_GOLD,
         );
         p5_enum_dropdown(
@@ -354,7 +349,7 @@ fn draw_starburst_zone(
             setter,
             ui_state,
             &mut state.popups,
-            92.0,
+            78.0,
             22.0,
             P5_GOLD,
         );
@@ -365,14 +360,14 @@ fn draw_starburst_zone(
             &params.global.voices,
             setter,
             ui_state,
-            96.0,
+            84.0,
             22.0,
             P5_CYAN,
         );
 
         let active_v = ui_state.active_voice_count.load(Ordering::Relaxed);
         let max_v = params.global.voices.value();
-        let (vc_r, _) = ui.allocate_exact_size(Vec2::new(76.0, 22.0), Sense::hover());
+        let (vc_r, _) = ui.allocate_exact_size(Vec2::new(66.0, 22.0), Sense::hover());
         ui.painter().rect(
             vc_r,
             CornerRadius::ZERO,
@@ -384,14 +379,14 @@ fn draw_starburst_zone(
             vc_r.center(),
             egui::Align2::CENTER_CENTER,
             format!("ACT {active_v:02}/{max_v:02}"),
-            font_id(9.5, FONT_HEAVY),
+            font_id(9.0, FONT_HEAVY),
             if active_v > 0 { P5_GOLD } else { P5_MUTED },
         );
 
         if p5_button(
             ui,
-            if state.midi_learn_armed { "LEARNING..." } else { "MIDI LEARN" },
-            88.0,
+            if state.midi_learn_armed { "LEARNING" } else { "LEARN" },
+            56.0,
             22.0,
             state.midi_learn_armed,
             P5_RED,
@@ -406,39 +401,109 @@ fn draw_starburst_zone(
             }
         }
 
-        let bpm = params.arp.internal_bpm.value();
-        let (bpm_r, _) = ui.allocate_exact_size(Vec2::new(80.0, 22.0), Sense::hover());
+        p5_toggle_pill(
+            ui,
+            "PROJ SYNC",
+            &params.global.host_bpm_sync,
+            setter,
+            ui_state,
+            74.0,
+            22.0,
+            P5_CYAN,
+        );
+
+        let all_synced = params.lfos.iter().all(|l| l.sync.value())
+            && params.steppers.iter().all(|s| s.sync.value())
+            && params.arp.sync.value()
+            && params.fx.delay.sync.value();
+        if p5_button(ui, "SYNC ALL", 66.0, 22.0, all_synced, P5_GOLD, true) {
+            let sync_params: [&BoolParam; 8] = [
+                &params.lfos[0].sync,
+                &params.lfos[1].sync,
+                &params.lfos[2].sync,
+                &params.lfos[3].sync,
+                &params.steppers[0].sync,
+                &params.steppers[1].sync,
+                &params.arp.sync,
+                &params.fx.delay.sync,
+            ];
+            for bp in sync_params {
+                setter.begin_set_parameter(bp);
+                setter.set_parameter(bp, true);
+                setter.end_set_parameter(bp);
+            }
+            ui_state.set_last_param_label("SYNC ALL: LFO/STP/ARP/DEL");
+        }
+
+        // Live Project / Internal BPM readout (interactive scroll/drag edits internal BPM when not locked to DAW)
+        let host_sync_on = params.global.host_bpm_sync.value();
+        let host_connected = ui_state.is_host_tempo_connected();
+        let active_bpm = if host_sync_on && host_connected {
+            ui_state.get_active_bpm()
+        } else {
+            params.arp.internal_bpm.value()
+        };
+        let bpm_tag = if host_sync_on && host_connected { "DAW" } else { "INT" };
+        let (bpm_r, bpm_resp) =
+            ui.allocate_exact_size(Vec2::new(88.0, 22.0), Sense::click_and_drag());
+        if bpm_resp.drag_started() {
+            setter.begin_set_parameter(&params.arp.internal_bpm);
+        }
+        if bpm_resp.dragged() {
+            let delta = -bpm_resp.drag_delta().y * 0.4;
+            let next = (params.arp.internal_bpm.value() + delta).clamp(40.0, 240.0);
+            setter.set_parameter(&params.arp.internal_bpm, next);
+            ui_state.set_last_param_label(&format!("INTERNAL BPM: {next:.1}"));
+        }
+        if bpm_resp.drag_stopped() {
+            setter.end_set_parameter(&params.arp.internal_bpm);
+        }
+        if bpm_resp.hovered() {
+            let scroll = ui.input(|i| i.smooth_scroll_delta.y);
+            if scroll.abs() > 0.2 {
+                let next = (params.arp.internal_bpm.value() + scroll.signum()).clamp(40.0, 240.0);
+                setter.begin_set_parameter(&params.arp.internal_bpm);
+                setter.set_parameter(&params.arp.internal_bpm, next);
+                setter.end_set_parameter(&params.arp.internal_bpm);
+                ui_state.set_last_param_label(&format!("INTERNAL BPM: {next:.1}"));
+            }
+        }
         ui.painter().rect(
             bpm_r,
             CornerRadius::ZERO,
             P5_PANEL,
-            Stroke::new(1.2_f32, Color32::from_rgb(66, 66, 80)),
+            Stroke::new(
+                1.3_f32,
+                if host_sync_on && host_connected {
+                    P5_CYAN
+                } else {
+                    P5_GOLD
+                },
+            ),
             StrokeKind::Inside,
         );
         ui.painter().text(
             bpm_r.center(),
             egui::Align2::CENTER_CENTER,
-            format!("{bpm:.1} BPM"),
+            format!("{bpm_tag} {active_bpm:.1}"),
             font_id(9.5, FONT_HEAVY),
-            P5_WHITE,
+            if host_sync_on && host_connected { P5_CYAN } else { P5_WHITE },
         );
 
         let arp_on = params.arp.enabled.value();
-        let (arp_r, _) = ui.allocate_exact_size(Vec2::new(72.0, 22.0), Sense::hover());
-        ui.painter().rect(
-            arp_r,
-            CornerRadius::ZERO,
-            if arp_on { P5_CYAN } else { P5_PANEL },
-            Stroke::new(1.2_f32, if arp_on { P5_WHITE } else { Color32::from_rgb(66, 66, 80) }),
-            StrokeKind::Inside,
-        );
-        ui.painter().text(
-            arp_r.center(),
-            egui::Align2::CENTER_CENTER,
-            if arp_on { "ARP: ON" } else { "ARP: OFF" },
-            font_id(9.5, FONT_IMPACT),
-            if arp_on { P5_BLACK } else { P5_MUTED },
-        );
+        if p5_button(
+            ui,
+            if arp_on { "ARP ON" } else { "ARP OFF" },
+            60.0,
+            22.0,
+            arp_on,
+            P5_CYAN,
+            true,
+        ) {
+            setter.begin_set_parameter(&params.arp.enabled);
+            setter.set_parameter(&params.arp.enabled, !arp_on);
+            setter.end_set_parameter(&params.arp.enabled);
+        }
     });
 
     // Right: Slanted White ACTIVE NOTE Trapezoid Badge (Exact Phantom Voicer match!)
@@ -464,46 +529,61 @@ fn draw_starburst_zone(
     draw_active_note_trapezoid(child_ui.painter(), trap_rect, "ACTIVE NOTE", &note_readout);
 
     // ========================================================================
-    // TAB CONTENT BODY
+    // TAB CONTENT BODY (or Spire Preset Vault when MENU / presets tab active)
     // ========================================================================
     let body_w = content_rect.width();
     let body_h = (content_rect.height() - header_h - 6.0).max(400.0);
 
-    match state.active_tab {
-        UiTab::Synth => draw_synth_page(
+    if state.browser.open {
+        draw_preset_browser_page(
             &mut child_ui,
             body_w,
             body_h,
             params,
             ui_state,
             shared_synth,
+            presets,
             setter,
             &mut state.popups,
-            &mut state.synth_page,
-            midi_learn,
-        ),
-        UiTab::FxMaster => draw_fx_page(
-            &mut child_ui,
-            body_w,
-            body_h,
-            params,
-            ui_state,
-            setter,
-            &mut state.popups,
-            &mut state.fx_page,
-            midi_learn,
-        ),
-        UiTab::ModArp => draw_mod_page(
-            &mut child_ui,
-            body_w,
-            body_h,
-            params,
-            ui_state,
-            shared_synth,
-            setter,
-            &mut state.popups,
-            &mut state.mod_page,
-        ),
+            &mut state.browser,
+        );
+    } else {
+        match state.active_tab {
+            UiTab::Synth => draw_synth_page(
+                &mut child_ui,
+                body_w,
+                body_h,
+                params,
+                ui_state,
+                shared_synth,
+                setter,
+                &mut state.popups,
+                &mut state.synth_page,
+                midi_learn,
+            ),
+            UiTab::FxMaster => draw_fx_page(
+                &mut child_ui,
+                body_w,
+                body_h,
+                params,
+                ui_state,
+                setter,
+                &mut state.popups,
+                &mut state.fx_page,
+                midi_learn,
+            ),
+            UiTab::ModArp => draw_mod_page(
+                &mut child_ui,
+                body_w,
+                body_h,
+                params,
+                ui_state,
+                shared_synth,
+                setter,
+                &mut state.popups,
+                &mut state.mod_page,
+            ),
+        }
     }
 }
 

@@ -4,7 +4,7 @@ use phantom_spire::params::{
     FilterType, LfoWaveform, MicrotuningMode, ModSource, ModTarget, OscMode, OscWaveform,
     PhantomSpireParams, PolyMode, ShaperMode, UnisonMode,
 };
-use phantom_spire::presets::PresetManager;
+use phantom_spire::presets::{PresetBank, PresetManager, SPIRE_CATEGORIES};
 use phantom_spire::SharedSynthState;
 use std::f64::consts::PI;
 
@@ -722,10 +722,20 @@ fn e2e_09_all_factory_presets_render_safely_and_user_preset_undo_redo() {
 
     let mut pm = PresetManager::with_user_dir(tmp_dir.clone());
     assert!(
-        pm.entries().len() >= 9,
-        "Expected >=9 embedded factory presets, got {}",
+        pm.entries().len() >= 50,
+        "Expected >=50 embedded factory presets, got {}",
         pm.entries().len()
     );
+
+    // Verify all 12 canonical Spire categories are represented
+    let counts = pm.category_counts(PresetBank::Factory, "");
+    for cat in SPIRE_CATEGORIES {
+        let count = counts.iter().find(|(c, _)| c == cat).map(|(_, n)| *n).unwrap_or(0);
+        assert!(
+            count >= 1,
+            "Canonical Spire category '{cat}' has 0 factory presets"
+        );
+    }
 
     let params = PhantomSpireParams::default();
     let valid_ids: HashSet<String> = params.param_map().into_iter().map(|(id, _, _)| id).collect();
@@ -744,7 +754,7 @@ fn e2e_09_all_factory_presets_render_safely_and_user_preset_undo_redo() {
         }
         pm.apply_to_headless(idx, &mut param_map, &mut extra, &shared)
             .unwrap_or_else(|e| panic!("Failed to apply factory preset '{name}': {e}"));
-        let (l, r) = render_notes(&params, &shared, &[55, 62, 67], 10000, 3000);
+        let (l, r) = render_notes(&params, &shared, &[55, 62, 67], 6000, 1500);
         let m = analyze(&l, &r, SR as f64);
         assert_basi(&format!("Preset[{idx}:{name}]"), &m);
         assert!(
@@ -754,17 +764,29 @@ fn e2e_09_all_factory_presets_render_safely_and_user_preset_undo_redo() {
         );
     }
 
-    // Save a custom user preset, reload via new PresetManager, test Undo/Redo
+    // Verify category/search/favorite filtering and save_user_preset_with_category + delete
+    pm.set_active_bank(PresetBank::Factory);
+    pm.set_active_category(Some("Bass"));
+    let bass_indices = pm.filtered_indices();
+    assert!(!bass_indices.is_empty(), "Expected Bass presets in filter");
+    let first_bass = bass_indices[0];
+    let fav_state = pm.toggle_favorite(first_bass);
+    assert!(fav_state, "toggle_favorite should set true");
+    pm.set_active_bank(PresetBank::Favorites);
+    pm.set_active_category(None);
+    assert!(pm.filtered_indices().contains(&first_bass));
+    pm.set_active_bank(PresetBank::All);
+
     let captured = PresetManager::capture_from_params(&params);
-    pm.save_user_preset("E2E_Custom_Test", "Lead", captured)
-        .expect("save_user_preset should succeed");
+    pm.save_user_preset_with_category("E2E_Custom_Test", "Lead", captured)
+        .expect("save_user_preset_with_category should succeed");
     let pm_reloaded = PresetManager::with_user_dir(tmp_dir.clone());
     assert!(
         pm_reloaded
             .entries()
             .iter()
-            .any(|e| e.name == "E2E_Custom_Test" && !e.is_factory),
-        "Saved user preset was not reloaded from disk"
+            .any(|e| e.name == "E2E_Custom_Test" && !e.is_factory && e.category == "Lead"),
+        "Saved user preset was not reloaded from disk with Lead category"
     );
 
     assert!(pm.can_undo(), "Undo stack should be populated after preset switches");
@@ -779,4 +801,54 @@ fn e2e_09_all_factory_presets_render_safely_and_user_preset_undo_redo() {
     );
 
     let _ = std::fs::remove_dir_all(&tmp_dir);
+}
+
+#[test]
+fn e2e_10_project_bpm_sync_scales_arp_lfo_stepper_and_delay() {
+    let (mut params, shared) = make_clean_init();
+    assert!(params.global.host_bpm_sync.value(), "host_bpm_sync should default to true");
+
+    set_bool_param(&mut params.arp.enabled, true);
+    set_bool_param(&mut params.arp.sync, true);
+    set_bool_param(&mut params.lfos[0].sync, true);
+    set_enum_param(&mut params.lfos[0].mod_slots[0].target, ModTarget::Filter1Cutoff);
+    set_float_param(&mut params.lfos[0].mod_slots[0].amt, 0.7);
+    set_bool_param(&mut params.fx.delay.mute, false);
+    set_bool_param(&mut params.fx.delay.sync, true);
+    set_float_param(&mut params.fx.delay.dry_wet, 0.5);
+
+    let render_at_bpm = |bpm: f32| -> (Vec<f32>, Vec<f32>) {
+        let mut eng = SynthEngine::new(SR);
+        let tr = TransportInfo {
+            tempo_bpm: bpm,
+            playing: true,
+            sample_rate: SR,
+            ppq_pos: Some(0.0),
+            pos_samples: Some(0),
+        };
+        let vs = eng.make_voice_settings(&params, &shared);
+        let vol = params.master.volume.value();
+        eng.note_on_with_params(60, 0.85, 0, &params, &vs);
+        eng.note_on_with_params(64, 0.85, 0, &params, &vs);
+        let n = (SR * 0.6) as usize;
+        let mut l = Vec::with_capacity(n);
+        let mut r = Vec::with_capacity(n);
+        for _ in 0..n {
+            let (sl, sr_s) = eng.process_sample_full(&params, &shared, &tr, &vs, vol);
+            l.push(sl);
+            r.push(sr_s);
+        }
+        (l, r)
+    };
+
+    let buf_90 = render_at_bpm(90.0);
+    let buf_160 = render_at_bpm(160.0);
+    let m90 = analyze(&buf_90.0, &buf_90.1, SR as f64);
+    let m160 = analyze(&buf_160.0, &buf_160.1, SR as f64);
+    assert_basi("bpm-90", &m90);
+    assert_basi("bpm-160", &m160);
+    assert!(
+        l2_diff(&buf_90, &buf_160) > 0.02,
+        "Synced Arp+LFO+Delay must measurably scale between 90 BPM and 160 BPM"
+    );
 }

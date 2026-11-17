@@ -5,9 +5,10 @@
 - **Synth Layout & Feature Reference (Pic 1)**: `Reveal Sound Spire` (`C:/Users/endio/.gemini/antigravity/brain/48de30d3-0701-4d45-89ed-a8e1bf7dde1e/.user_uploaded/media_1794950790446_78240997.jpg`)
 - **Target Window Size**: `1220 x 760` (DPI scale 1.0)
 - **Required Captured Views**:
-  1. `synth.png` (`SYNTH` tab: Left Crimson Command Zone + OSC 1–4, Unison/Mix, Dual Filter 1–2, Mod Bays ENV/LFO/STP/ARP + Bottom 49-key Live Monitor)
+  1. `synth.png` (`SYNTH` tab: Left Crimson Command Zone + OSC 1–4, Unison/Mix, Dual Filter 1–2, Mod Bays ENV/LFO/STP/ARP with `>= 8px` bottom fader margin + Bottom 49-key Live Monitor)
   2. `fx_master.png` (`FX & MASTER` tab: 5-unit FX Rack `SHP`, `PHS`, `CHR`, `DEL`, `REV` with `MUTE` + Master `X-Comp`, `Warm`/`Soft`/`Boost`, 3-Band `EQ` curve & controls)
   3. `mod_arp.png` (`MOD & ARP` tab: 15-slot Mod Matrix, Stepper 1–2 16-step grids, Arpeggiator pattern & clock controls)
+  4. `presets.png` (`PRESETS` browser overlay: Bank filter `ALL/FACTORY/USER/★ FAV`, Category sidebar with counts, Search bar, scrollable preset list w/ category pills + author + favorite star, `SAVE AS`/`DELETE`/`INIT`/`UNDO`/`REDO`)
 
 ## Mandatory Hard-Fail Gates (Any Violation = Immediate FAIL)
 1. **Zero Blank / Solid-Color Renders**: Whole image and all 4 quadrants must have luminance `stddev > 20`, exact `1220x760` client resolution.

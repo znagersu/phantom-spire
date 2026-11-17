@@ -665,6 +665,9 @@ pub struct GlobalParams {
     #[id = "g_utun"]
     pub microtuning: EnumParam<MicrotuningMode>,
 
+    #[id = "host_bpm_sync"]
+    pub host_bpm_sync: BoolParam,
+
     #[nested(array)]
     pub macros: [MacroParam; 4],
 }
@@ -711,6 +714,7 @@ impl Default for GlobalParams {
             .with_value_to_string(formatters::v2s_f32_percentage(0))
             .with_string_to_value(formatters::s2v_f32_percentage()),
             microtuning: EnumParam::new("Microtuning", MicrotuningMode::Equal),
+            host_bpm_sync: BoolParam::new("Project BPM Sync", true),
             macros: [
                 MacroParam::new(0),
                 MacroParam::new(1),

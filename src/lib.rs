@@ -1,7 +1,7 @@
 use nih_plug::prelude::*;
 use std::path::PathBuf;
 use std::sync::atomic::{
-    AtomicI8, AtomicU16, AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering,
+    AtomicBool, AtomicI8, AtomicU16, AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering,
 };
 use std::sync::{Arc, Mutex};
 
@@ -134,6 +134,8 @@ pub struct SharedUiState {
     pub lfo_phases: [AtomicU32; 4],
     pub arp_step: AtomicU8,
     pub stp_steps: [AtomicU8; 2],
+    pub active_bpm_bits: AtomicU32,
+    pub host_tempo_connected: AtomicBool,
 }
 
 impl Default for SharedUiState {
@@ -156,6 +158,8 @@ impl Default for SharedUiState {
             lfo_phases: std::array::from_fn(|_| AtomicU32::new(0.0_f32.to_bits())),
             arp_step: AtomicU8::new(255),
             stp_steps: [AtomicU8::new(255), AtomicU8::new(255)],
+            active_bpm_bits: AtomicU32::new(120.0_f32.to_bits()),
+            host_tempo_connected: AtomicBool::new(false),
         }
     }
 }
@@ -339,6 +343,33 @@ impl SharedUiState {
         } else {
             0.0
         }
+    }
+
+    #[inline]
+    pub fn set_bpm_state(&self, bpm: f32, host_connected: bool) {
+        let safe = if bpm.is_finite() {
+            bpm.clamp(40.0, 260.0)
+        } else {
+            120.0
+        };
+        self.active_bpm_bits.store(safe.to_bits(), Ordering::Relaxed);
+        self.host_tempo_connected
+            .store(host_connected, Ordering::Relaxed);
+    }
+
+    #[inline]
+    pub fn get_active_bpm(&self) -> f32 {
+        let v = f32::from_bits(self.active_bpm_bits.load(Ordering::Relaxed));
+        if v.is_finite() {
+            v.clamp(40.0, 260.0)
+        } else {
+            120.0
+        }
+    }
+
+    #[inline]
+    pub fn is_host_tempo_connected(&self) -> bool {
+        self.host_tempo_connected.load(Ordering::Relaxed)
     }
 }
 
@@ -619,12 +650,18 @@ impl Plugin for PhantomSpire {
             }
         }
 
+        let host_tempo = context.transport().tempo;
+        let host_connected = host_tempo.is_some();
+        let effective_bpm = if self.params.global.host_bpm_sync.value() {
+            host_tempo.unwrap_or(self.params.arp.internal_bpm.value() as f64)
+        } else {
+            self.params.arp.internal_bpm.value() as f64
+        }
+        .clamp(40.0, 260.0) as f32;
+        self.ui_state.set_bpm_state(effective_bpm, host_connected);
+
         let transport = TransportInfo {
-            tempo_bpm: context
-                .transport()
-                .tempo
-                .unwrap_or(self.params.arp.internal_bpm.value() as f64)
-                .clamp(40.0, 260.0) as f32,
+            tempo_bpm: effective_bpm,
             playing: context.transport().playing,
             sample_rate: context.transport().sample_rate,
             ppq_pos: context.transport().pos_beats(),

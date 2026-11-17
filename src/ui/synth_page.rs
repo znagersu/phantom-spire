@@ -839,11 +839,11 @@ fn draw_env_bay(
 
         // Left: 6-stage Envelope Plot + 6 Vertical Faders
         ui.allocate_ui_with_layout(
-            Vec2::new(left_w, 206.0),
+            Vec2::new(left_w, 194.0),
             egui::Layout::top_down(egui::Align::Min),
             |ui| {
                 ui.spacing_mut().item_spacing.y = 4.0;
-                let (plot_r, _) = ui.allocate_exact_size(Vec2::new(left_w, 60.0), Sense::hover());
+                let (plot_r, _) = ui.allocate_exact_size(Vec2::new(left_w, 52.0), Sense::hover());
                 draw_env_plot(
                     ui.painter(),
                     plot_r,
@@ -860,19 +860,19 @@ fn draw_env_bay(
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 2.0;
                     let fw = (left_w - 10.0) / 6.0;
-                    p5_v_fader(ui, "ATT", &env.attack, setter, ui_state, accent, fw, 110.0);
-                    p5_v_fader(ui, "DEC", &env.decay, setter, ui_state, accent, fw, 110.0);
-                    p5_v_fader(ui, "SUS", &env.sustain, setter, ui_state, P5_GOLD, fw, 110.0);
-                    p5_v_fader(ui, "SLT", &env.slt, setter, ui_state, P5_CYAN, fw, 110.0);
-                    p5_v_fader(ui, "SLL", &env.sll, setter, ui_state, P5_CYAN, fw, 110.0);
-                    p5_v_fader(ui, "REL", &env.release, setter, ui_state, P5_RED, fw, 110.0);
+                    p5_v_fader(ui, "ATT", &env.attack, setter, ui_state, accent, fw, 92.0);
+                    p5_v_fader(ui, "DEC", &env.decay, setter, ui_state, accent, fw, 92.0);
+                    p5_v_fader(ui, "SUS", &env.sustain, setter, ui_state, P5_GOLD, fw, 92.0);
+                    p5_v_fader(ui, "SLT", &env.slt, setter, ui_state, P5_CYAN, fw, 92.0);
+                    p5_v_fader(ui, "SLL", &env.sll, setter, ui_state, P5_CYAN, fw, 92.0);
+                    p5_v_fader(ui, "REL", &env.release, setter, ui_state, P5_RED, fw, 92.0);
                 });
             },
         );
 
         // Right: VEL bar + 2 Direct Mod Slots
         ui.allocate_ui_with_layout(
-            Vec2::new(right_w, 206.0),
+            Vec2::new(right_w, 194.0),
             egui::Layout::top_down(egui::Align::Min),
             |ui| {
                 ui.spacing_mut().item_spacing.y = 4.0;
@@ -943,11 +943,11 @@ fn draw_lfo_bay(
         ui.spacing_mut().item_spacing.x = 6.0;
 
         ui.allocate_ui_with_layout(
-            Vec2::new(left_w, 206.0),
+            Vec2::new(left_w, 194.0),
             egui::Layout::top_down(egui::Align::Min),
             |ui| {
                 ui.spacing_mut().item_spacing.y = 4.0;
-                let (plot_r, _) = ui.allocate_exact_size(Vec2::new(left_w, 58.0), Sense::hover());
+                let (plot_r, _) = ui.allocate_exact_size(Vec2::new(left_w, 54.0), Sense::hover());
                 draw_lfo_plot(
                     ui.painter(),
                     plot_r,
@@ -1006,7 +1006,7 @@ fn draw_lfo_bay(
         );
 
         ui.allocate_ui_with_layout(
-            Vec2::new(right_w, 206.0),
+            Vec2::new(right_w, 194.0),
             egui::Layout::top_down(egui::Align::Min),
             |ui| {
                 ui.spacing_mut().item_spacing.y = 5.0;
@@ -1087,7 +1087,7 @@ fn draw_compact_stepper_bay(
     // Interactive 16-bar stepper paint strip
     let active_step = ui_state.stp_steps[stp_idx].load(Ordering::Relaxed) as usize;
     let step_count = stp.steps_count.value().clamp(2, 16) as usize;
-    let (rect, resp) = ui.allocate_exact_size(Vec2::new(w, 168.0), Sense::click_and_drag());
+    let (rect, resp) = ui.allocate_exact_size(Vec2::new(w, 152.0), Sense::click_and_drag());
     let p = ui.painter();
     p.rect_filled(rect, CornerRadius::ZERO, P5_BG);
 
@@ -1201,7 +1201,7 @@ fn draw_compact_arp_bay(
         .map(|g| g.arp_steps_enabled)
         .unwrap_or(0xFFFF);
 
-    let (grid_r, _) = ui.allocate_exact_size(Vec2::new(w, 136.0), Sense::hover());
+    let (grid_r, _) = ui.allocate_exact_size(Vec2::new(w, 126.0), Sense::hover());
     ui.painter().rect_filled(grid_r, CornerRadius::ZERO, P5_BG);
     ui.painter().rect_stroke(grid_r, CornerRadius::ZERO, Stroke::new(1.4_f32, P5_WHITE), StrokeKind::Inside);
 

@@ -1757,7 +1757,7 @@ fn eval_global_only_source(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::params::{set_enum_param, set_float_param};
+    use crate::params::{set_bool_param, set_enum_param, set_float_param};
 
     #[test]
     fn envelope_6_stage_tracks_att_dec_sus_slope_up_down_and_release() {
@@ -1982,5 +1982,89 @@ mod tests {
             "Voice-to-global reverb mix bridge out of expected range: {}",
             last_global_mods.fx_reverb_mix
         );
+    }
+
+    #[test]
+    fn lfo_and_stepper_follow_host_bpm_90_to_160_without_clicks_or_nans() {
+        let sr = 48000.0;
+        let mut params = PhantomSpireParams::default();
+        let shared = SharedSynthState::default();
+
+        for i in 0..4 {
+            set_bool_param(&mut params.lfos[i].sync, true);
+            set_enum_param(&mut params.lfos[i].sync_div, SyncDiv::D1_4);
+        }
+        for i in 0..2 {
+            set_bool_param(&mut params.steppers[i].sync, true);
+            set_enum_param(&mut params.steppers[i].sync_div, SyncDiv::D1_16);
+        }
+
+        // Measure LFO phase advance over 1.0 s at 90 BPM vs 160 BPM
+        // At 1/4 div: 90 BPM = 1.5 cycles/s, 160 BPM = 2.667 cycles/s (ratio = 160/90)
+        let measure_lfo_cycles = |bpm: f32| -> f32 {
+            let mut lfo = LfoEngine::new(sr, 123);
+            let mut prev_p = lfo.current_phase();
+            let mut cycles = 0.0_f32;
+            for _ in 0..48000 {
+                let v = lfo.process_sample(&params.lfos[0], bpm, 0.0, 0.0);
+                assert!(v.is_finite());
+                let cur_p = lfo.current_phase();
+                let dp = if cur_p >= prev_p {
+                    cur_p - prev_p
+                } else {
+                    1.0 - prev_p + cur_p
+                };
+                cycles += dp;
+                prev_p = cur_p;
+            }
+            cycles
+        };
+
+        let c_90 = measure_lfo_cycles(90.0);
+        let c_160 = measure_lfo_cycles(160.0);
+        assert!((c_90 - 1.5).abs() < 0.02, "90 BPM 1/4 LFO expected 1.5 cyc/s, got {c_90}");
+        assert!(
+            (c_160 - (160.0 / 60.0)).abs() < 0.02,
+            "160 BPM 1/4 LFO expected 2.667 cyc/s, got {c_160}"
+        );
+
+        // Measure Stepper transitions over 1.0 s at 90 BPM vs 160 BPM (1/16 div)
+        // 90 BPM 1/16 = 6 steps/s -> 6 steps in ~1.0 s; 160 BPM 1/16 = 10.67 steps/s -> 10 steps in ~1.0 s
+        let count_stp_steps = |bpm: f32| -> usize {
+            let mut stp = StepperEngine::new(sr);
+            let mut prev = stp.current_step();
+            let mut transitions = 0usize;
+            for _ in 0..48020 {
+                let v = stp.process_sample(0, &params.steppers[0], &shared, bpm);
+                assert!(v.is_finite());
+                let cur = stp.current_step();
+                if cur != prev {
+                    transitions += 1;
+                    prev = cur;
+                }
+            }
+            transitions
+        };
+
+        let s_90 = count_stp_steps(90.0);
+        let s_160 = count_stp_steps(160.0);
+        assert_eq!(s_90, 6, "90 BPM 1/16 stepper should advance 6 steps in 1.0s");
+        assert_eq!(s_160, 10, "160 BPM 1/16 stepper should advance 10 steps in 1.0s");
+
+        // Rapid host BPM sweeps including NaN/extreme values stay finite & click-free
+        let mut gmod = GlobalModState::new(sr);
+        for (idx, &b) in [90.0_f32, 160.0, 40.0, 240.0, f32::NAN, 120.0].iter().enumerate() {
+            for s in 0..2048 {
+                let ramp_bpm = if b.is_finite() {
+                    b + (s as f32 * 0.01) * if idx % 2 == 0 { 1.0 } else { -1.0 }
+                } else {
+                    b
+                };
+                let frame = gmod.begin_sample(&params, &shared, ramp_bpm);
+                for v in frame.mono_lfo.iter().chain(frame.stp.iter()) {
+                    assert!(v.is_finite() && v.abs() <= 2.0);
+                }
+            }
+        }
     }
 }

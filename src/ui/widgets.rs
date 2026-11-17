@@ -574,7 +574,7 @@ pub fn p5_v_fader<P: Param>(
     track_h: f32,
 ) {
     ui.allocate_ui_with_layout(
-        Vec2::new(width, track_h + 24.0),
+        Vec2::new(width, track_h + 28.0),
         egui::Layout::top_down(egui::Align::Center),
         |ui| {
             ui.spacing_mut().item_spacing.y = 2.0;
@@ -662,11 +662,11 @@ pub fn p5_v_fader<P: Param>(
                 font_id(9.5, FONT_IMPACT),
                 P5_WHITE,
             );
-            let (val_r, _) = ui.allocate_exact_size(Vec2::new(width, 10.0), Sense::hover());
+            let (val_r, _) = ui.allocate_exact_size(Vec2::new(width, 11.0), Sense::hover());
             ui.painter().text(
                 val_r.center(),
                 egui::Align2::CENTER_CENTER,
-                param.to_string(),
+                format_param_display(param),
                 font_id(8.0, FONT_HEAVY),
                 P5_MUTED,
             );
@@ -769,6 +769,82 @@ pub fn p5_enum_dropdown<T: Enum + PartialEq + Copy + 'static>(
     p.add(Shape::convex_polygon(tri, accent, Stroke::NONE));
 
     changed
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn p5_string_dropdown(
+    ui: &mut egui::Ui,
+    id: &str,
+    items: &[&str],
+    cur_idx: usize,
+    popups: &mut PopupOverlayState,
+    width: f32,
+    height: f32,
+    accent: Color32,
+) -> Option<usize> {
+    let selected = popups.take_selection(id);
+    let cur_name = items.get(cur_idx).copied().unwrap_or("--");
+
+    let (rect, resp) = ui.allocate_exact_size(Vec2::new(width, height), Sense::click());
+    let is_open = popups.active.as_ref().map(|a| a.id == id).unwrap_or(false);
+
+    if resp.clicked() {
+        popups.open(
+            id,
+            rect,
+            items.iter().map(|s| (*s).to_owned()).collect(),
+            cur_idx,
+            accent,
+        );
+    }
+
+    let p = ui.painter();
+    p.rect_filled(rect.translate(Vec2::new(2.0, 2.0)), CornerRadius::ZERO, P5_BLACK);
+    p.rect(
+        rect,
+        CornerRadius::ZERO,
+        if is_open {
+            P5_RED_DEEP
+        } else if resp.hovered() {
+            Color32::from_rgb(38, 16, 22)
+        } else {
+            P5_SURFACE
+        },
+        Stroke::new(
+            1.5_f32,
+            if is_open {
+                accent
+            } else if resp.hovered() {
+                P5_WHITE
+            } else {
+                P5_DIM
+            },
+        ),
+        StrokeKind::Inside,
+    );
+
+    let text_clip = Rect::from_min_max(
+        Pos2::new(rect.left() + 5.0, rect.top()),
+        Pos2::new(rect.right() - 16.0, rect.bottom()),
+    );
+    ui.painter_at(text_clip).text(
+        Pos2::new(rect.left() + 6.0, rect.center().y),
+        egui::Align2::LEFT_CENTER,
+        cur_name,
+        font_id(10.0, FONT_HEAVY),
+        P5_WHITE,
+    );
+
+    let cx = rect.right() - 9.0;
+    let cy = rect.center().y;
+    let tri = vec![
+        Pos2::new(cx - 3.5, cy - 2.0),
+        Pos2::new(cx + 3.5, cy - 2.0),
+        Pos2::new(cx, cy + 3.0),
+    ];
+    p.add(Shape::convex_polygon(tri, accent, Stroke::NONE));
+
+    selected
 }
 
 // ============================================================================

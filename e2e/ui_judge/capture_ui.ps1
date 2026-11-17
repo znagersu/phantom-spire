@@ -291,9 +291,10 @@ $env:PHANTOM_SPIRE_DISABLE_AUTO_UPDATE = "1"
 $env:PHANTOM_SPIRE_UPDATER_SILENT = "1"
 
 $tabSpecs = @(
-    @{ id = "synth";     envTab = "synth"; label = "SYNTH" },
-    @{ id = "fx_master"; envTab = "fx";    label = "FX & MASTER" },
-    @{ id = "mod_arp";   envTab = "mod";   label = "MOD & ARP" }
+    @{ id = "synth";     envTab = "synth";   label = "SYNTH" },
+    @{ id = "fx_master"; envTab = "fx";      label = "FX & MASTER" },
+    @{ id = "mod_arp";   envTab = "mod";     label = "MOD & ARP" },
+    @{ id = "presets";   envTab = "presets"; label = "PRESETS" }
 )
 
 $capturedFiles = @()

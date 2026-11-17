@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "Detuned Fifth Synth",
+  "author": "Phantom Spire",
+  "category": "Synth",
+  "params": {
+    "g_voc": 12,
+    "o_mod_1": "Classic",
+    "o_wav_1": "Saw",
+    "o_ucnt_1": 5,
+    "o_udet_1": 0.3,
+    "o_wid_1": 0.8,
+    "o_lvl_1": 0.78,
+    "o_mod_2": "Classic",
+    "o_wav_2": "Pulse",
+    "o_not_2": 7,
+    "o_ucnt_2": 3,
+    "o_udet_2": 0.24,
+    "o_lvl_2": 0.52,
+    "f_mod_1": "Scorpio",
+    "f_typ_1": "LP4",
+    "f_cut_1": 4200.0,
+    "f_res_1": 0.2,
+    "e_att_1": 0.005,
+    "e_dec_1": 0.5,
+    "e_sus_1": 0.7,
+    "e_rel_1": 0.35,
+    "x_dsyn": true,
+    "x_ddw": 0.24,
+    "x_rmod": "Plate 2",
+    "x_rdw": 0.28
+  }
+}

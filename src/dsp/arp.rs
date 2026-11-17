@@ -112,6 +112,7 @@ pub struct Arpeggiator {
     step_elapsed_samples: f64,
     current_step_duration: f64,
     current_gate_samples: f64,
+    last_base_step_samples: f64,
     gate_is_open: bool,
     needs_immediate_trigger: bool,
     last_host_ppq_step: Option<i64>,
@@ -143,6 +144,7 @@ impl Arpeggiator {
             step_elapsed_samples: 0.0,
             current_step_duration: 5512.5,
             current_gate_samples: 4134.0,
+            last_base_step_samples: 5512.5,
             gate_is_open: false,
             needs_immediate_trigger: false,
             last_host_ppq_step: None,
@@ -369,17 +371,26 @@ impl Arpeggiator {
             return events;
         }
 
-        // Effective BPM: host tempo when playing in DAW, else deterministic internal BPM
-        let bpm = if transport.playing && transport.tempo_bpm.is_finite() && transport.tempo_bpm > 0.0
-        {
-            sanitize_bpm(transport.tempo_bpm)
-        } else if transport.tempo_bpm.is_finite() && transport.tempo_bpm >= 40.0 && transport.ppq_pos.is_some() {
+        // Effective BPM: strictly follow transport.tempo_bpm when valid (caller resolves host sync vs internal BPM)
+        let bpm = if transport.tempo_bpm.is_finite() && transport.tempo_bpm > 0.0 {
             sanitize_bpm(transport.tempo_bpm)
         } else {
             sanitize_bpm(params.internal_bpm.value())
         };
 
         let base_step_samples = self.compute_base_step_samples(params, bpm);
+        // Handle rapid BPM / rate changes cleanly mid-step without phase jumps or NaNs
+        if !self.needs_immediate_trigger
+            && self.last_base_step_samples > 1.0
+            && (base_step_samples - self.last_base_step_samples).abs() > 0.5
+        {
+            let ratio = (base_step_samples / self.last_base_step_samples).clamp(0.1, 10.0);
+            self.step_elapsed_samples = (self.step_elapsed_samples * ratio).max(0.0);
+            self.current_step_duration = (self.current_step_duration * ratio).max(32.0);
+            self.current_gate_samples = (self.current_gate_samples * ratio)
+                .clamp(8.0, (self.current_step_duration - 1.0).max(8.0));
+        }
+        self.last_base_step_samples = base_step_samples;
         let swing = params.swing.value().clamp(0.0, 0.75) as f64;
         let gate_ratio = params.gate.value().clamp(0.05, 1.0) as f64;
         let steps_count = params.steps_count.value().clamp(1, 16) as usize;
@@ -881,5 +892,78 @@ mod tests {
             note_ons.len() >= 3 && note_ons[0] == 60 && note_ons[1] == 67,
             "Latched arp should continue stepping: {note_ons:?}"
         );
+    }
+
+    #[test]
+    fn arp_follows_transport_bpm_changes_and_scales_step_rate() {
+        let sr = 48000.0;
+        let mut params = ArpParams::default();
+        set_bool_param(&mut params.enabled, true);
+        set_enum_param(&mut params.mode, ArpMode::Up);
+        set_bool_param(&mut params.sync, true);
+        set_enum_param(&mut params.sync_div, SyncDiv::D1_16);
+        set_float_param(&mut params.internal_bpm, 120.0);
+
+        let shared = SharedSynthState::default();
+
+        let count_note_ons = |bpm: f32, playing: bool| -> usize {
+            let transport = TransportInfo {
+                tempo_bpm: bpm,
+                playing,
+                sample_rate: sr,
+                ppq_pos: None,
+                pos_samples: None,
+            };
+            let mut arp = Arpeggiator::new(sr);
+            arp.note_on(60, 0.8, 0, &params);
+            arp.note_on(64, 0.8, 0, &params);
+            let evs = collect_triggered_notes(&mut arp, &params, &shared, &transport, 48000);
+            evs.iter()
+                .filter(|(_, ev)| matches!(ev, ArpEvent::NoteOn { .. }))
+                .count()
+        };
+
+        // 1/16 note at 90 BPM = 6 steps/sec -> 6 or 7 triggers in 1.0 s (incl. t=0)
+        // 1/16 note at 160 BPM = 10.67 steps/sec -> 11 triggers in 1.0 s (incl. t=0)
+        // Verify this works even when DAW transport is stopped (playing=false)
+        let n_90 = count_note_ons(90.0, false);
+        let n_160 = count_note_ons(160.0, false);
+        assert!(
+            n_90 >= 6 && n_90 <= 7,
+            "Expected 6..7 arp triggers in 1s at 90 BPM, got {n_90}"
+        );
+        assert!(
+            n_160 >= 10 && n_160 <= 12,
+            "Expected 10..12 arp triggers in 1s at 160 BPM, got {n_160}"
+        );
+
+        // Rapid mid-stream BPM swings (90 -> 160 -> 45 -> 240 -> NaN) remain valid & bounded
+        let mut arp = Arpeggiator::new(sr);
+        arp.note_on(60, 0.9, 0, &params);
+        arp.note_on(67, 0.9, 0, &params);
+        let bpms = [90.0_f32, 160.0, 45.0, 240.0, f32::NAN, 128.0];
+        let mut triggers = 0usize;
+        for (i, &b) in bpms.iter().enumerate() {
+            let t = TransportInfo {
+                tempo_bpm: b,
+                playing: i % 2 == 0,
+                sample_rate: sr,
+                ppq_pos: None,
+                pos_samples: None,
+            };
+            for _ in 0..8000 {
+                let evs = arp.process_sample(&params, &shared, &t);
+                for ev in evs.iter() {
+                    if let ArpEvent::NoteOn { velocity, .. } = ev {
+                        assert!(velocity.is_finite() && *velocity > 0.0);
+                        triggers += 1;
+                    }
+                }
+            }
+        }
+        assert!(triggers >= 6);
+        let off = arp.all_notes_off();
+        assert!(!off.is_empty() || arp.sounding_note_mask() == 0);
+        assert_eq!(arp.sounding_note_mask(), 0);
     }
 }

@@ -1,9 +1,10 @@
 use crate::params::PhantomSpireParams;
 use crate::presets::PresetManager;
+use crate::ui::preset_browser::PresetBrowserState;
 use crate::ui::theme::{
     draw_crimson_command_bg, draw_p5_3d_text, draw_p5_icon_badge, draw_ransom_logo, font_id,
-    icon_for_category, FONT_HEAVY, FONT_IMPACT, P5_BLACK, P5_CARD, P5_CYAN, P5_DIM,
-    P5_GOLD, P5_MAGENTA, P5_MUTED, P5_PANEL, P5_RED, P5_RED_DEEP, P5_SURFACE, P5_WHITE,
+    icon_for_category, FONT_HEAVY, FONT_IMPACT, P5_BLACK, P5_CARD, P5_CYAN, P5_GOLD, P5_MAGENTA,
+    P5_MUTED, P5_RED, P5_RED_DEEP, P5_WHITE,
 };
 use crate::ui::widgets::{
     p5_button, p5_enum_dropdown, p5_int_stepper, p5_knob_sized, p5_toggle_pill, p5_wheel,
@@ -16,24 +17,6 @@ use nih_plug_egui::egui::{
     self, Color32, CornerRadius, Pos2, Rect, Sense, Shape, Stroke, StrokeKind, Vec2,
 };
 use std::sync::{Arc, Mutex};
-
-pub struct PresetBrowserState {
-    pub menu_open: bool,
-    pub save_name: String,
-    pub save_category: String,
-    pub status_msg: Option<String>,
-}
-
-impl Default for PresetBrowserState {
-    fn default() -> Self {
-        Self {
-            menu_open: false,
-            save_name: String::from("My Phantom Patch"),
-            save_category: String::from("User"),
-            status_msg: None,
-        }
-    }
-}
 
 #[allow(clippy::too_many_arguments)]
 pub fn draw_left_command_zone(
@@ -87,23 +70,47 @@ pub fn draw_left_command_zone(
     );
 
     // Tilted White Active Preset Card (Exact Phantom Voicer signature card!)
-    let (preset_name, preset_cat, preset_idx, preset_total, can_undo, can_redo) = {
+    let (
+        preset_name,
+        preset_cat,
+        preset_is_fac,
+        preset_is_fav,
+        preset_idx,
+        preset_total,
+        filter_tag,
+        can_undo,
+        can_redo,
+    ) = {
         let mgr = presets.lock().unwrap();
         let cur = mgr.current_preset();
+        let filt_tag = mgr
+            .active_category()
+            .map(|c| format!("FLT:{}", c.to_uppercase()))
+            .unwrap_or_else(|| {
+                if cur.is_factory {
+                    String::from("FAC")
+                } else {
+                    String::from("USR")
+                }
+            });
         (
             cur.name.clone(),
             cur.category.clone(),
+            cur.is_factory,
+            cur.is_favorite,
             mgr.current_index() + 1,
             mgr.entries().len(),
+            filt_tag,
             mgr.can_undo(),
             mgr.can_redo(),
         )
     };
+    let _ = preset_is_fac;
 
     let (card_r, card_resp) =
         child_ui.allocate_exact_size(Vec2::new(content_rect.width(), 44.0), Sense::click());
     if card_resp.clicked() {
-        browser.menu_open = !browser.menu_open;
+        browser.open = !browser.open;
     }
     {
         let p = child_ui.painter();
@@ -127,20 +134,31 @@ pub fn draw_left_command_zone(
         // Clip preset name so it never overflows the cyan wedge
         let name_clip = Rect::from_min_max(
             Pos2::new(pill.left() + 35.0, pill.top() + 2.0),
-            Pos2::new(pill.right() - 26.0, pill.bottom() - 2.0),
+            Pos2::new(pill.right() - 24.0, pill.bottom() - 2.0),
         );
         let np = child_ui.painter_at(name_clip);
+        let title_str = if preset_is_fav {
+            format!("★ {preset_name}")
+        } else {
+            preset_name
+        };
         np.text(
             Pos2::new(pill.left() + 37.0, pill.top() + 14.0),
             egui::Align2::LEFT_CENTER,
-            &preset_name,
-            font_id(13.0, FONT_IMPACT),
+            title_str,
+            font_id(12.5, FONT_IMPACT),
             P5_BLACK,
         );
         np.text(
             Pos2::new(pill.left() + 37.0, pill.bottom() - 10.0),
             egui::Align2::LEFT_CENTER,
-            format!("{} • {:02}/{:02}", preset_cat.to_uppercase(), preset_idx, preset_total),
+            format!(
+                "[{}] {} {:02}/{:02}",
+                preset_cat.to_uppercase(),
+                filter_tag,
+                preset_idx,
+                preset_total
+            ),
             font_id(8.5, FONT_HEAVY),
             P5_RED_DEEP,
         );
@@ -155,7 +173,7 @@ pub fn draw_left_command_zone(
         ];
         p.add(Shape::convex_polygon(
             wedge,
-            if browser.menu_open { P5_GOLD } else { P5_CYAN },
+            if browser.open { P5_GOLD } else { P5_CYAN },
             Stroke::new(1.4_f32, P5_BLACK),
         ));
     }
@@ -175,8 +193,8 @@ pub fn draw_left_command_zone(
             let _ = mgr.apply_to_gui(idx, params, setter, shared_synth);
             ui_state.set_last_param_label(&format!("PRESET: {}", mgr.current_preset().name));
         }
-        if p5_button(ui, "MENU", 48.0, 22.0, browser.menu_open, P5_GOLD, true) {
-            browser.menu_open = !browser.menu_open;
+        if p5_button(ui, "MENU", 48.0, 22.0, browser.open, P5_GOLD, true) {
+            browser.open = !browser.open;
         }
         if p5_button(ui, "INIT", 42.0, 22.0, false, P5_RED, true) {
             let mut mgr = presets.lock().unwrap();
@@ -583,229 +601,5 @@ fn draw_obsidian_subcard(
             );
             ui.add_space(3.0);
             body(ui);
-        });
-}
-
-/// Custom P5 Preset Browser & Save User Preset Overlay Modal.
-#[allow(clippy::too_many_arguments)]
-pub fn render_preset_browser_modal(
-    ctx: &egui::Context,
-    params: &PhantomSpireParams,
-    ui_state: &SharedUiState,
-    shared_synth: &SharedSynthState,
-    presets: &Arc<Mutex<PresetManager>>,
-    setter: &ParamSetter,
-    browser: &mut PresetBrowserState,
-) {
-    if !browser.menu_open {
-        return;
-    }
-
-    if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-        browser.menu_open = false;
-        return;
-    }
-
-    let modal_rect = Rect::from_min_size(Pos2::new(286.0, 82.0), Vec2::new(430.0, 480.0));
-
-    egui::Area::new(egui::Id::new("p5_preset_browser_modal"))
-        .order(egui::Order::Foreground)
-        .fixed_pos(modal_rect.min)
-        .show(ctx, |ui| {
-            ui.painter().rect_filled(
-                modal_rect.translate(Vec2::new(5.0, 5.0)),
-                CornerRadius::ZERO,
-                P5_BLACK,
-            );
-            egui::Frame::new()
-                .fill(P5_CARD)
-                .stroke(Stroke::new(2.5_f32, P5_WHITE))
-                .inner_margin(10.0)
-                .show(ui, |ui| {
-                    ui.set_width(modal_rect.width() - 20.0);
-                    ui.set_min_height(modal_rect.height() - 20.0);
-
-                    ui.horizontal(|ui| {
-                        let (hr, _) = ui.allocate_exact_size(Vec2::new(250.0, 24.0), Sense::hover());
-                        draw_p5_3d_text(
-                            ui.painter(),
-                            Pos2::new(hr.left() + 2.0, hr.center().y),
-                            egui::Align2::LEFT_CENTER,
-                            "PRESET VAULT",
-                            15.0,
-                            P5_GOLD,
-                            P5_WHITE,
-                            FONT_IMPACT,
-                        );
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if p5_button(ui, "CLOSE", 56.0, 22.0, false, P5_RED, true) {
-                                browser.menu_open = false;
-                            }
-                            if p5_button(ui, "RESCAN", 58.0, 22.0, false, P5_CYAN, true) {
-                                presets.lock().unwrap().rescan();
-                            }
-                        });
-                    });
-
-                    ui.add_space(6.0);
-
-                    // Save User Preset bar
-                    egui::Frame::new()
-                        .fill(P5_PANEL)
-                        .stroke(Stroke::new(1.5_f32, P5_RED))
-                        .inner_margin(6.0)
-                        .show(ui, |ui| {
-                            ui.horizontal(|ui| {
-                                ui.painter().text(
-                                    ui.cursor().min + Vec2::new(2.0, 10.0),
-                                    egui::Align2::LEFT_CENTER,
-                                    "SAVE:",
-                                    font_id(10.0, FONT_IMPACT),
-                                    P5_GOLD,
-                                );
-                                ui.add_space(36.0);
-                                ui.add(
-                                    egui::TextEdit::singleline(&mut browser.save_name)
-                                        .desired_width(175.0)
-                                        .font(font_id(11.0, FONT_HEAVY)),
-                                );
-                                ui.add(
-                                    egui::TextEdit::singleline(&mut browser.save_category)
-                                        .desired_width(72.0)
-                                        .font(font_id(11.0, FONT_HEAVY)),
-                                );
-                                if p5_button(ui, "SAVE", 52.0, 22.0, false, P5_GOLD, true) {
-                                    let data = PresetManager::capture_from_params(params);
-                                    let mut mgr = presets.lock().unwrap();
-                                    match mgr.save_user_preset(
-                                        &browser.save_name,
-                                        &browser.save_category,
-                                        data,
-                                    ) {
-                                        Ok(_) => {
-                                            browser.status_msg = Some(format!(
-                                                "Saved '{}'",
-                                                browser.save_name.trim()
-                                            ));
-                                            ui_state.set_last_param_label("USER PRESET SAVED");
-                                        }
-                                        Err(e) => {
-                                            browser.status_msg = Some(e);
-                                        }
-                                    }
-                                }
-                            });
-                            if let Some(msg) = &browser.status_msg {
-                                ui.add_space(2.0);
-                                let (mr, _) = ui.allocate_exact_size(
-                                    Vec2::new(ui.available_width(), 14.0),
-                                    Sense::hover(),
-                                );
-                                ui.painter().text(
-                                    Pos2::new(mr.left() + 2.0, mr.center().y),
-                                    egui::Align2::LEFT_CENTER,
-                                    msg,
-                                    font_id(9.5, FONT_HEAVY),
-                                    P5_CYAN,
-                                );
-                            }
-                        });
-
-                    ui.add_space(6.0);
-
-                    // Preset List
-                    let mut load_idx: Option<usize> = None;
-                    let mut del_idx: Option<usize> = None;
-
-                    let (cur_idx, entries_snapshot): (usize, Vec<(String, String, bool)>) = {
-                        let mgr = presets.lock().unwrap();
-                        (
-                            mgr.current_index(),
-                            mgr.entries()
-                                .iter()
-                                .map(|e| (e.name.clone(), e.category.clone(), e.is_factory))
-                                .collect(),
-                        )
-                    };
-
-                    egui::ScrollArea::vertical()
-                        .max_height(340.0)
-                        .show(ui, |ui| {
-                            ui.spacing_mut().item_spacing.y = 3.0;
-                            for (idx, (name, cat, is_factory)) in entries_snapshot.iter().enumerate() {
-                                let is_cur = idx == cur_idx;
-                                ui.horizontal(|ui| {
-                                    let row_w = if *is_factory {
-                                        ui.available_width()
-                                    } else {
-                                        ui.available_width() - 42.0
-                                    };
-                                    let (r, resp) =
-                                        ui.allocate_exact_size(Vec2::new(row_w, 28.0), Sense::click());
-                                    let p = ui.painter();
-                                    let bg = if is_cur {
-                                        P5_WHITE
-                                    } else if resp.hovered() {
-                                        P5_RED_DEEP
-                                    } else {
-                                        P5_SURFACE
-                                    };
-                                    p.rect(
-                                        r,
-                                        CornerRadius::ZERO,
-                                        bg,
-                                        Stroke::new(1.4_f32, if is_cur { P5_RED } else { P5_DIM }),
-                                        StrokeKind::Inside,
-                                    );
-                                    draw_p5_icon_badge(
-                                        p,
-                                        Pos2::new(r.left() + 14.0, r.center().y),
-                                        8.0,
-                                        icon_for_category(cat),
-                                    );
-                                    p.text(
-                                        Pos2::new(r.left() + 28.0, r.center().y),
-                                        egui::Align2::LEFT_CENTER,
-                                        name,
-                                        font_id(11.5, FONT_IMPACT),
-                                        if is_cur { P5_BLACK } else { P5_WHITE },
-                                    );
-                                    p.text(
-                                        Pos2::new(r.right() - 8.0, r.center().y),
-                                        egui::Align2::RIGHT_CENTER,
-                                        format!(
-                                            "{} {}",
-                                            cat.to_uppercase(),
-                                            if *is_factory { "[FAC]" } else { "[USR]" }
-                                        ),
-                                        font_id(9.0, FONT_HEAVY),
-                                        if is_cur { P5_RED } else { P5_GOLD },
-                                    );
-                                    if resp.clicked() {
-                                        load_idx = Some(idx);
-                                    }
-
-                                    if !is_factory && p5_button(ui, "DEL", 38.0, 28.0, false, P5_RED, true) {
-                                        del_idx = Some(idx);
-                                    }
-                                });
-                            }
-                        });
-
-                    if let Some(idx) = load_idx {
-                        let mut mgr = presets.lock().unwrap();
-                        let _ = mgr.apply_to_gui(idx, params, setter, shared_synth);
-                        ui_state.set_last_param_label(&format!("PRESET: {}", mgr.current_preset().name));
-                        browser.menu_open = false;
-                    }
-                    if let Some(idx) = del_idx {
-                        let mut mgr = presets.lock().unwrap();
-                        if let Err(e) = mgr.delete_user_preset(idx) {
-                            browser.status_msg = Some(e);
-                        } else {
-                            browser.status_msg = Some(String::from("Deleted user preset"));
-                        }
-                    }
-                });
         });
 }

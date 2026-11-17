@@ -1414,4 +1414,73 @@ mod tests {
             assert!(stereo_diff > 1.0, "Reverb wide=1.0 should be stereo decorrelated at sr={sr}");
         }
     }
+
+    #[test]
+    fn delay_tempo_sync_scales_with_bpm_90_to_160_and_handles_rapid_bpm_changes() {
+        let sr = 48000.0;
+        let mods = GlobalModOffsets::default();
+
+        let mut del_p = DelayParams::default();
+        set_bool_param(&mut del_p.sync, true);
+        set_enum_param(&mut del_p.sync_div_l, crate::params::SyncDiv::D1_8);
+        set_enum_param(&mut del_p.sync_div_r, crate::params::SyncDiv::D1_8);
+        set_bool_param(&mut del_p.ping_pong, false);
+        set_float_param(&mut del_p.feedback, 0.0);
+        set_float_param(&mut del_p.depth, 0.0);
+        set_float_param(&mut del_p.dry_wet, 1.0);
+        set_float_param(&mut del_p.hi_cut, 20000.0);
+        set_float_param(&mut del_p.low_cut, 20.0);
+
+        // Find first echo peak sample index for a single impulse after settling delay slew
+        let find_echo_sample = |bpm: f32| -> usize {
+            let mut del = DelayFx::new(sr);
+            // Settle slew at target BPM with silence
+            for _ in 0..((0.35 * sr) as usize) {
+                let _ = del.process_sample(0.0, 0.0, &del_p, &mods, bpm);
+            }
+            let mut peak_idx = 0usize;
+            let mut peak_val = 0.0_f32;
+            for i in 0..((0.5 * sr) as usize) {
+                let x = if i == 0 { 1.0 } else { 0.0 };
+                let (l, r) = del.process_sample(x, x, &del_p, &mods, bpm);
+                assert!(l.is_finite() && r.is_finite());
+                if i > 100 && l.abs() > peak_val {
+                    peak_val = l.abs();
+                    peak_idx = i;
+                }
+            }
+            assert!(peak_val > 0.3, "Echo peak too weak at bpm={bpm}: {peak_val}");
+            peak_idx
+        };
+
+        // 1/8 note = 0.5 beat:
+        // At 90 BPM: 0.5 * 60 / 90 = 0.3333 s -> ~16000 samples
+        // At 160 BPM: 0.5 * 60 / 160 = 0.1875 s -> ~9000 samples
+        let echo_90 = find_echo_sample(90.0);
+        let echo_160 = find_echo_sample(160.0);
+        assert!(
+            (echo_90 as i32 - 16000).abs() < 150,
+            "90 BPM 1/8 delay expected ~16000 samples, got {echo_90}"
+        );
+        assert!(
+            (echo_160 as i32 - 9000).abs() < 150,
+            "160 BPM 1/8 delay expected ~9000 samples, got {echo_160}"
+        );
+
+        // Rapid BPM sweeps (including NaN / extremes) produce finite, smooth, bounded audio
+        let mut del = DelayFx::new(sr);
+        set_float_param(&mut del_p.feedback, 0.55);
+        for (idx, &b) in [90.0_f32, 160.0, 40.0, 240.0, f32::NAN, 128.0].iter().enumerate() {
+            for s in 0..4000 {
+                let x = if s < 500 {
+                    0.3 * (TAU * 330.0 * s as f32 / sr).sin()
+                } else {
+                    0.0
+                };
+                let bpm = if b.is_finite() { b + idx as f32 } else { b };
+                let (l, r) = del.process_sample(x, x, &del_p, &mods, bpm);
+                assert!(l.is_finite() && r.is_finite() && l.abs() <= 2.0 && r.abs() <= 2.0);
+            }
+        }
+    }
 }
