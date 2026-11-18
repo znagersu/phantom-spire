@@ -272,6 +272,13 @@ impl UpdaterConfig {
     pub fn from_env() -> Self {
         let mut cfg = Self::default();
 
+        // When launched as Standalone `phantom_spire.exe` from a user-chosen folder
+        // (e.g. Downloads or Desktop), update that exact executable in-place rather than
+        // relocating it to AppData and deleting the user's running EXE.
+        if let Some(active_exe) = detect_active_standalone_exe(&cfg.temp_dir) {
+            cfg.canonical_exe_path = active_exe;
+        }
+
         // Layer 1: Optional config file (explicit env path or %APPDATA%\PhantomSpire\updater.json)
         let config_path = std::env::var("PHANTOM_SPIRE_UPDATER_CONFIG")
             .ok()
@@ -1265,6 +1272,24 @@ pub fn current_module_path() -> Option<PathBuf> {
 #[cfg(not(target_os = "windows"))]
 pub fn current_module_path() -> Option<PathBuf> {
     std::env::current_exe().ok()
+}
+
+fn detect_active_standalone_exe(temp_dir: &Path) -> Option<PathBuf> {
+    let mod_path = current_module_path()?;
+    let name = mod_path.file_name()?.to_str()?;
+    if !name.eq_ignore_ascii_case("phantom_spire.exe") || !mod_path.is_file() {
+        return None;
+    }
+    let key = normalize_path_key(&mod_path);
+    let temp_key = normalize_path_key(temp_dir);
+    if key.contains("\\target\\")
+        || key.contains("phantomspiretrash-")
+        || key.contains(".phantomspiretrash-")
+        || (!temp_key.is_empty() && key.starts_with(&format!("{temp_key}\\")))
+    {
+        return None;
+    }
+    Some(mod_path)
 }
 
 /// Detects the currently loaded plugin bundle (`.vst3`) or standalone executable via `GetModuleHandleExW`.
@@ -2277,6 +2302,22 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn rename_with_av_retry(from: &Path, to: &Path) -> std::io::Result<()> {
+    let mut last_err = None;
+    for attempt in 0..16 {
+        match fs::rename(from, to) {
+            Ok(()) => return Ok(()),
+            Err(e) => {
+                last_err = Some(e);
+                if attempt < 15 {
+                    std::thread::sleep(std::time::Duration::from_millis(50));
+                }
+            }
+        }
+    }
+    Err(last_err.unwrap_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "rename failed")))
+}
+
 /// Atomically installs a new VST3 bundle into `canonical_vst3_dir` with rollback on failure
 /// and NTFS move-to-trash hot-swap if the existing DLL is locked in RAM.
 fn install_vst3_bundle_atomic(
@@ -2351,10 +2392,10 @@ fn install_vst3_bundle_atomic(
         }
     }
 
-    if let Err(e) = fs::rename(&staged, target) {
+    if let Err(e) = rename_with_av_retry(&staged, target) {
         let _ = fs::remove_dir_all(&staged);
         if let Some(ref bak) = backup_path {
-            let _ = fs::rename(bak, target);
+            let _ = rename_with_av_retry(bak, target);
         }
         return Err(format!(
             "Failed to finalize VST3 install at '{}': {e}",
@@ -2459,15 +2500,20 @@ fn install_exe_atomic(
         }
     }
 
-    if let Err(e) = fs::rename(&staged, target) {
-        let _ = fs::remove_file(&staged);
-        if let Some(ref bak) = backup_path {
-            let _ = fs::rename(bak, target);
+    if let Err(e) = rename_with_av_retry(&staged, target) {
+        // Fallback: if Windows Defender / AV still briefly locked rename, copy into place directly
+        if fs::copy(&staged, target).is_ok() {
+            let _ = fs::remove_file(&staged);
+        } else {
+            let _ = fs::remove_file(&staged);
+            if let Some(ref bak) = backup_path {
+                let _ = rename_with_av_retry(bak, target);
+            }
+            return Err(format!(
+                "Failed to finalize EXE install at '{}': {e}",
+                target.display()
+            ));
         }
-        return Err(format!(
-            "Failed to finalize EXE install at '{}': {e}",
-            target.display()
-        ));
     }
 
     let final_hash = sha256_file(target).unwrap_or_default();

@@ -1086,3 +1086,79 @@ fn test_check_async_sweeps_stale_trash_without_touching_active_staging() {
         "check_async must not disturb PhantomSpireUpdate-* staging directories"
     );
 }
+
+#[cfg(target_os = "windows")]
+#[test]
+fn test_running_standalone_exe_in_user_folder_updates_in_place_without_self_deleting() {
+    let sb = TestSandbox::new("running_exe_inplace");
+    let user_exe = sb.scan_root_a.join("phantom_spire.exe");
+    let stale_exe = sb.scan_root_b.join("phantom_spire.exe");
+
+    // Copy a real Windows PE executable (`ping.exe`) so spawning it genuinely locks the file in RAM
+    let ping_exe = Path::new("C:\\Windows\\System32\\ping.exe");
+    fs::copy(ping_exe, &user_exe).expect("copy ping.exe as simulated active standalone");
+    fs::write(&stale_exe, b"OLD_STALE_COPY").unwrap();
+
+    let mut child = std::process::Command::new(&user_exe)
+        .args(["-n", "5", "127.0.0.1"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .expect("spawn locked phantom_spire.exe process");
+
+    // Give Windows a brief moment to map the image
+    thread::sleep(Duration::from_millis(100));
+
+    let (zip_bytes, zip_sha, vst3_sha, exe_sha) =
+        make_release_zip(b"NEW_VST3_V031", b"NEW_EXE_V031_BYTES");
+    let mut routes = HashMap::new();
+    routes.insert(
+        "/releases/PhantomSpire-win64.zip".to_string(),
+        MockResponse::ok_bytes(zip_bytes),
+    );
+    let server = MockGitHubServer::start(routes);
+
+    let zip_url = server.url("/releases/PhantomSpire-win64.zip");
+    let manifest_json = format!(
+        r#"{{"version":"0.3.1","zip_url":"{zip_url}","sha256":"{zip_sha}","vst3_sha256":"{vst3_sha}","exe_sha256":"{exe_sha}"}}"#
+    );
+    server.set_route("/latest.json", MockResponse::ok_json(manifest_json));
+
+    // Simulate active Standalone EXE path (`canonical_exe_path == user_exe`)
+    let mut cfg = sb.config(&server.url("/latest.json"), "0.3.0");
+    cfg.trusted_url_prefix = server.base_url.clone();
+    cfg.canonical_exe_path = user_exe.clone();
+
+    let status = run_update_pipeline(&cfg, "0.3.1", &zip_url)
+        .expect("in-place update of running standalone EXE must succeed");
+    assert!(matches!(status, UpdateStatus::ReadyToRestart { .. }));
+
+    // CRITICAL: user's EXE in scan_root_a MUST still exist and contain the NEW bytes!
+    assert!(
+        user_exe.is_file(),
+        "user's standalone EXE must NOT delete itself during update"
+    );
+    assert!(
+        fs::read(&user_exe).unwrap() == b"NEW_EXE_V031_BYTES",
+        "user's standalone EXE must be updated in-place to new version"
+    );
+    assert!(
+        !stale_exe.exists(),
+        "other duplicate EXE in scan_root_b must still be cleansed"
+    );
+    assert!(
+        fs::read(sb.canonical_vst3_dll()).unwrap() == b"NEW_VST3_V031",
+        "canonical VST3 must also be updated"
+    );
+
+    let _ = child.kill();
+    let _ = child.wait();
+
+    // After process exits, next cleanse sweeps leftover hot-swap trash completely
+    let _ = cleanse_with_config(&cfg).expect("post-exit cleanse");
+    assert!(
+        sb.managed_temp_entries().is_empty(),
+        "all temp/trash entries must be gone after process exits and cleanses: {:?}",
+        sb.managed_temp_entries()
+    );
+}
