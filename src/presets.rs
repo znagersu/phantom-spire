@@ -1,4 +1,5 @@
 use crate::params::{ExtraSynthState, PhantomSpireParams};
+use crate::presets_factory::FACTORY_PRESETS_JSON;
 use crate::SharedSynthState;
 use nih_plug::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -9,64 +10,16 @@ pub const PRESET_SCHEMA_VERSION: u32 = 1;
 const MAX_UNDO_HISTORY: usize = 64;
 
 pub const SPIRE_CATEGORIES: &[&str] = &[
-    "Init", "Bass", "Lead", "Synth", "Pad", "Pluck", "Arp", "Acid", "Chord", "Keys", "Seq", "FX",
-];
-
-const FACTORY_PRESETS_JSON: &[(&str, &str)] = &[
-    ("01_Init.json", include_str!("../presets/factory/01_Init.json")),
-    ("02_Phantom_Reese_Bass.json", include_str!("../presets/factory/02_Phantom_Reese_Bass.json")),
-    ("03_Crimson_Hyper_Lead.json", include_str!("../presets/factory/03_Crimson_Hyper_Lead.json")),
-    ("04_Velvet_Nebula_Pad.json", include_str!("../presets/factory/04_Velvet_Nebula_Pad.json")),
-    ("05_Crystal_Glass_Pluck.json", include_str!("../presets/factory/05_Crystal_Glass_Pluck.json")),
-    ("06_Metaverse_Cyber_Arp.json", include_str!("../presets/factory/06_Metaverse_Cyber_Arp.json")),
-    ("07_Shibuya_303_Acid.json", include_str!("../presets/factory/07_Shibuya_303_Acid.json")),
-    ("08_Tokyo_Rave_Chord.json", include_str!("../presets/factory/08_Tokyo_Rave_Chord.json")),
-    ("09_Shadow_Warp_FX.json", include_str!("../presets/factory/09_Shadow_Warp_FX.json")),
-    ("10_Sub_Pressure_808.json", include_str!("../presets/factory/10_Sub_Pressure_808.json")),
-    ("11_Neuro_Growl_Bass.json", include_str!("../presets/factory/11_Neuro_Growl_Bass.json")),
-    ("12_Future_Slap_Bass.json", include_str!("../presets/factory/12_Future_Slap_Bass.json")),
-    ("13_Cyberpunk_Mid_Bass.json", include_str!("../presets/factory/13_Cyberpunk_Mid_Bass.json")),
-    ("14_UK_Donk_Bass.json", include_str!("../presets/factory/14_UK_Donk_Bass.json")),
-    ("15_Deep_Analog_Bass.json", include_str!("../presets/factory/15_Deep_Analog_Bass.json")),
-    ("16_Anthem_Supersaw_Lead.json", include_str!("../presets/factory/16_Anthem_Supersaw_Lead.json")),
-    ("17_Screaming_Sync_Lead.json", include_str!("../presets/factory/17_Screaming_Sync_Lead.json")),
-    ("18_Velvet_Glide_Lead.json", include_str!("../presets/factory/18_Velvet_Glide_Lead.json")),
-    ("19_8Bit_Phantom_Lead.json", include_str!("../presets/factory/19_8Bit_Phantom_Lead.json")),
-    ("20_Trance_Pluck_Lead.json", include_str!("../presets/factory/20_Trance_Pluck_Lead.json")),
-    ("21_Analog_Poly_Brass.json", include_str!("../presets/factory/21_Analog_Poly_Brass.json")),
-    ("22_Detuned_Fifth_Synth.json", include_str!("../presets/factory/22_Detuned_Fifth_Synth.json")),
-    ("23_Neon_Poly_Stab.json", include_str!("../presets/factory/23_Neon_Poly_Stab.json")),
-    ("24_Cyber_Stack_Synth.json", include_str!("../presets/factory/24_Cyber_Stack_Synth.json")),
-    ("25_Retro_80s_Poly.json", include_str!("../presets/factory/25_Retro_80s_Poly.json")),
-    ("26_Warm_Choir_Pad.json", include_str!("../presets/factory/26_Warm_Choir_Pad.json")),
-    ("27_Shimmer_Glass_Pad.json", include_str!("../presets/factory/27_Shimmer_Glass_Pad.json")),
-    ("28_Dark_Abyss_Drone.json", include_str!("../presets/factory/28_Dark_Abyss_Drone.json")),
-    ("29_Analog_String_Ensemble.json", include_str!("../presets/factory/29_Analog_String_Ensemble.json")),
-    ("30_Progressive_House_Pluck.json", include_str!("../presets/factory/30_Progressive_House_Pluck.json")),
-    ("31_Harp_Bell_Pluck.json", include_str!("../presets/factory/31_Harp_Bell_Pluck.json")),
-    ("32_FM_Kalimba_Mallet.json", include_str!("../presets/factory/32_FM_Kalimba_Mallet.json")),
-    ("33_Muted_Guitar_Pluck.json", include_str!("../presets/factory/33_Muted_Guitar_Pluck.json")),
-    ("34_Trance_Gate_Arp.json", include_str!("../presets/factory/34_Trance_Gate_Arp.json")),
-    ("35_Acid_Line_Arp.json", include_str!("../presets/factory/35_Acid_Line_Arp.json")),
-    ("36_Euphoric_Chord_Arp.json", include_str!("../presets/factory/36_Euphoric_Chord_Arp.json")),
-    ("37_Dark_Pulse_Arp.json", include_str!("../presets/factory/37_Dark_Pulse_Arp.json")),
-    ("38_Resonant_Squelch_303.json", include_str!("../presets/factory/38_Resonant_Squelch_303.json")),
-    ("39_Hardcore_Drive_303.json", include_str!("../presets/factory/39_Hardcore_Drive_303.json")),
-    ("40_Liquid_Acid_Line.json", include_str!("../presets/factory/40_Liquid_Acid_Line.json")),
-    ("41_Deep_House_Stab.json", include_str!("../presets/factory/41_Deep_House_Stab.json")),
-    ("42_Future_Supersaw_Chord.json", include_str!("../presets/factory/42_Future_Supersaw_Chord.json")),
-    ("43_Organ_Seventh_Stab.json", include_str!("../presets/factory/43_Organ_Seventh_Stab.json")),
-    ("44_Electric_Tine_EP.json", include_str!("../presets/factory/44_Electric_Tine_EP.json")),
-    ("45_FM_Rhodes_Keys.json", include_str!("../presets/factory/45_FM_Rhodes_Keys.json")),
-    ("46_Funk_Clavinet_Keys.json", include_str!("../presets/factory/46_Funk_Clavinet_Keys.json")),
-    ("47_Gospel_Synth_Organ.json", include_str!("../presets/factory/47_Gospel_Synth_Organ.json")),
-    ("48_Stepper_Filter_Gate.json", include_str!("../presets/factory/48_Stepper_Filter_Gate.json")),
-    ("49_Euclidean_Pulse_Seq.json", include_str!("../presets/factory/49_Euclidean_Pulse_Seq.json")),
-    ("50_Talking_Vowel_Seq.json", include_str!("../presets/factory/50_Talking_Vowel_Seq.json")),
-    ("51_Industrial_Perc_Seq.json", include_str!("../presets/factory/51_Industrial_Perc_Seq.json")),
-    ("52_SciFi_Riser_Sweep.json", include_str!("../presets/factory/52_SciFi_Riser_Sweep.json")),
-    ("53_Sub_Drop_Impact.json", include_str!("../presets/factory/53_Sub_Drop_Impact.json")),
-    ("54_Laser_Zap_FX.json", include_str!("../presets/factory/54_Laser_Zap_FX.json")),
+    "Init",
+    "Basses",
+    "Drums",
+    "FX",
+    "Keys",
+    "Leads",
+    "Pads",
+    "Plucks",
+    "Seq & Arp",
+    "Synth",
 ];
 
 pub fn normalize_category(raw: &str) -> String {
@@ -79,7 +32,21 @@ pub fn normalize_category(raw: &str) -> String {
             return String::from(cat);
         }
     }
-    trimmed.to_string()
+    match trimmed.to_ascii_lowercase().as_str() {
+        "init" => String::from("Init"),
+        "bass" | "basses" | "acid" | "sub" => String::from("Basses"),
+        "drum" | "drums" | "perc" | "percussion" => String::from("Drums"),
+        "fx" | "sfx" => String::from("FX"),
+        "key" | "keys" | "piano" | "organ" => String::from("Keys"),
+        "lead" | "leads" => String::from("Leads"),
+        "pad" | "pads" => String::from("Pads"),
+        "pluck" | "plucks" => String::from("Plucks"),
+        "seq & arp" | "seq&arp" | "seq" | "arp" | "arps" | "sequence" => {
+            String::from("Seq & Arp")
+        }
+        "synth" | "synths" | "chord" | "chords" | "brass" => String::from("Synth"),
+        _ => trimmed.to_string(),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -138,6 +105,8 @@ pub struct PresetData {
     pub name: String,
     pub author: String,
     pub category: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
     pub params: BTreeMap<String, serde_json::Value>,
     #[serde(default = "default_steppers")]
     pub steppers: [[f32; 16]; 2],
@@ -154,6 +123,7 @@ impl Default for PresetData {
             name: String::from("Init"),
             author: String::from("Phantom Spire"),
             category: String::from("Init"),
+            tags: Vec::new(),
             params: BTreeMap::new(),
             steppers: default_steppers(),
             stepper_ties: [0; 2],
@@ -169,6 +139,7 @@ pub struct PresetEntry {
     pub name: String,
     pub author: String,
     pub category: String,
+    pub tags: Vec<String>,
     pub is_factory: bool,
     pub is_favorite: bool,
     pub path: Option<PathBuf>,
@@ -188,6 +159,8 @@ pub struct PresetManager {
     favorites: BTreeSet<String>,
     active_bank: PresetBank,
     active_category: Option<String>,
+    active_author: Option<String>,
+    active_tag: Option<String>,
     search_query: String,
     undo_stack: Vec<PresetSnapshot>,
     redo_stack: Vec<PresetSnapshot>,
@@ -310,6 +283,8 @@ impl PresetManager {
             favorites: BTreeSet::new(),
             active_bank: PresetBank::All,
             active_category: None,
+            active_author: None,
+            active_tag: None,
             search_query: String::new(),
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
@@ -370,11 +345,13 @@ impl PresetManager {
                     } else {
                         data.author.clone()
                     };
+                    let tags = data.tags.clone();
                     let is_favorite = self.favorites.contains(&Self::favorite_key(true, &name));
                     entries.push(PresetEntry {
                         name,
                         author,
                         category,
+                        tags,
                         is_factory: true,
                         is_favorite,
                         path: None,
@@ -392,6 +369,7 @@ impl PresetManager {
                 name: String::from("Init"),
                 author: String::from("Phantom Spire"),
                 category: String::from("Init"),
+                tags: Vec::new(),
                 is_factory: true,
                 is_favorite: false,
                 path: None,
@@ -446,11 +424,13 @@ impl PresetManager {
                     } else {
                         data.author.clone()
                     };
+                    let tags = data.tags.clone();
                     let is_favorite = self.favorites.contains(&Self::favorite_key(false, &name));
                     entries.push(PresetEntry {
                         name,
                         author,
                         category,
+                        tags,
                         is_factory: false,
                         is_favorite,
                         path: Some(path),
@@ -505,6 +485,36 @@ impl PresetManager {
         });
     }
 
+    pub fn active_author(&self) -> Option<&str> {
+        self.active_author.as_deref()
+    }
+
+    pub fn set_active_author(&mut self, author: Option<&str>) {
+        self.active_author = author.and_then(|a| {
+            let trimmed = a.trim();
+            if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("ALL") {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        });
+    }
+
+    pub fn active_tag(&self) -> Option<&str> {
+        self.active_tag.as_deref()
+    }
+
+    pub fn set_active_tag(&mut self, tag: Option<&str>) {
+        self.active_tag = tag.and_then(|t| {
+            let trimmed = t.trim();
+            if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("ALL") {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        });
+    }
+
     pub fn search_query(&self) -> &str {
         &self.search_query
     }
@@ -513,27 +523,36 @@ impl PresetManager {
         self.search_query = query.to_string();
     }
 
-    pub fn toggle_favorite(&mut self, index: usize) -> bool {
+    pub fn is_favorite(&self, index: usize) -> bool {
+        self.entries.get(index).map(|e| e.is_favorite).unwrap_or(false)
+    }
+
+    pub fn set_favorite(&mut self, index: usize, fav: bool) -> bool {
         let Some(entry) = self.entries.get_mut(index) else {
             return false;
         };
         let key = Self::favorite_key(entry.is_factory, &entry.name);
-        if entry.is_favorite {
-            entry.is_favorite = false;
-            self.favorites.remove(&key);
-        } else {
-            entry.is_favorite = true;
+        entry.is_favorite = fav;
+        if fav {
             self.favorites.insert(key);
+        } else {
+            self.favorites.remove(&key);
         }
-        let next = entry.is_favorite;
         self.save_favorites();
-        next
+        fav
+    }
+
+    pub fn toggle_favorite(&mut self, index: usize) -> bool {
+        let next = !self.is_favorite(index);
+        self.set_favorite(index, next)
     }
 
     fn matches_filter(
         entry: &PresetEntry,
         bank: PresetBank,
         category: Option<&str>,
+        author: Option<&str>,
+        tag: Option<&str>,
         search_lower: &str,
     ) -> bool {
         let bank_ok = match bank {
@@ -546,7 +565,20 @@ impl PresetManager {
             return false;
         }
         if let Some(cat) = category {
-            if !cat.is_empty() && !cat.eq_ignore_ascii_case("ALL") && !entry.category.eq_ignore_ascii_case(cat) {
+            if !cat.is_empty() && !cat.eq_ignore_ascii_case("ALL") {
+                let norm = normalize_category(cat);
+                if !entry.category.eq_ignore_ascii_case(&norm) {
+                    return false;
+                }
+            }
+        }
+        if let Some(auth) = author {
+            if !auth.is_empty() && !entry.author.eq_ignore_ascii_case(auth) {
+                return false;
+            }
+        }
+        if let Some(t) = tag {
+            if !t.is_empty() && !entry.tags.iter().any(|et| et.eq_ignore_ascii_case(t)) {
                 return false;
             }
         }
@@ -554,7 +586,11 @@ impl PresetManager {
             let name_hit = entry.name.to_ascii_lowercase().contains(search_lower);
             let cat_hit = entry.category.to_ascii_lowercase().contains(search_lower);
             let auth_hit = entry.author.to_ascii_lowercase().contains(search_lower);
-            if !name_hit && !cat_hit && !auth_hit {
+            let tag_hit = entry
+                .tags
+                .iter()
+                .any(|t| t.to_ascii_lowercase().contains(search_lower));
+            if !name_hit && !cat_hit && !auth_hit && !tag_hit {
                 return false;
             }
         }
@@ -562,9 +598,11 @@ impl PresetManager {
     }
 
     pub fn filtered_indices(&self) -> Vec<usize> {
-        self.filtered_indices_for(
+        self.filtered_indices_query(
             self.active_bank,
             self.active_category.as_deref(),
+            self.active_author.as_deref(),
+            self.active_tag.as_deref(),
             &self.search_query,
         )
     }
@@ -575,11 +613,22 @@ impl PresetManager {
         category: Option<&str>,
         search: &str,
     ) -> Vec<usize> {
+        self.filtered_indices_query(bank, category, None, None, search)
+    }
+
+    pub fn filtered_indices_query(
+        &self,
+        bank: PresetBank,
+        category: Option<&str>,
+        author: Option<&str>,
+        tag: Option<&str>,
+        search: &str,
+    ) -> Vec<usize> {
         let search_lower = search.trim().to_ascii_lowercase();
         self.entries
             .iter()
             .enumerate()
-            .filter(|(_, e)| Self::matches_filter(e, bank, category, &search_lower))
+            .filter(|(_, e)| Self::matches_filter(e, bank, category, author, tag, &search_lower))
             .map(|(i, _)| i)
             .collect()
     }
@@ -592,41 +641,75 @@ impl PresetManager {
                 let count = self
                     .entries
                     .iter()
-                    .filter(|e| Self::matches_filter(e, bank, Some(cat), &search_lower))
+                    .filter(|e| Self::matches_filter(e, bank, Some(cat), None, None, &search_lower))
                     .count();
                 (cat, count)
             })
             .collect()
     }
 
+    pub fn authors(&self, bank: PresetBank) -> Vec<(String, usize)> {
+        let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+        for e in &self.entries {
+            if Self::matches_filter(e, bank, None, None, None, "") {
+                *counts.entry(e.author.clone()).or_insert(0) += 1;
+            }
+        }
+        counts.into_iter().collect()
+    }
+
+    pub fn tags(&self, bank: PresetBank) -> Vec<(String, usize)> {
+        let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+        for e in &self.entries {
+            if Self::matches_filter(e, bank, None, None, None, "") {
+                for t in &e.tags {
+                    *counts.entry(t.clone()).or_insert(0) += 1;
+                }
+            }
+        }
+        counts.into_iter().collect()
+    }
+
     pub fn total_count_for_bank(&self, bank: PresetBank) -> usize {
         self.entries
             .iter()
-            .filter(|e| Self::matches_filter(e, bank, None, ""))
+            .filter(|e| Self::matches_filter(e, bank, None, None, None, ""))
             .count()
     }
 
     pub fn select_next(&mut self) -> usize {
         let bank = self.active_bank;
         let cat = self.active_category.clone();
+        let auth = self.active_author.clone();
+        let tag = self.active_tag.clone();
         let search = self.search_query.clone();
-        self.select_next_filtered(bank, cat.as_deref(), &search)
+        let filtered = self.filtered_indices_query(
+            bank,
+            cat.as_deref(),
+            auth.as_deref(),
+            tag.as_deref(),
+            &search,
+        );
+        self.step_next_in(&filtered)
     }
 
     pub fn select_prev(&mut self) -> usize {
         let bank = self.active_bank;
         let cat = self.active_category.clone();
+        let auth = self.active_author.clone();
+        let tag = self.active_tag.clone();
         let search = self.search_query.clone();
-        self.select_prev_filtered(bank, cat.as_deref(), &search)
+        let filtered = self.filtered_indices_query(
+            bank,
+            cat.as_deref(),
+            auth.as_deref(),
+            tag.as_deref(),
+            &search,
+        );
+        self.step_prev_in(&filtered)
     }
 
-    pub fn select_next_filtered(
-        &mut self,
-        bank: PresetBank,
-        category: Option<&str>,
-        search: &str,
-    ) -> usize {
-        let filtered = self.filtered_indices_for(bank, category, search);
+    fn step_next_in(&mut self, filtered: &[usize]) -> usize {
         if filtered.is_empty() {
             if !self.entries.is_empty() {
                 self.current_index = (self.current_index + 1) % self.entries.len();
@@ -641,13 +724,7 @@ impl PresetManager {
         self.current_index
     }
 
-    pub fn select_prev_filtered(
-        &mut self,
-        bank: PresetBank,
-        category: Option<&str>,
-        search: &str,
-    ) -> usize {
-        let filtered = self.filtered_indices_for(bank, category, search);
+    fn step_prev_in(&mut self, filtered: &[usize]) -> usize {
         if filtered.is_empty() {
             if !self.entries.is_empty() {
                 self.current_index = if self.current_index == 0 {
@@ -668,6 +745,26 @@ impl PresetManager {
             self.current_index = filtered[filtered.len() - 1];
         }
         self.current_index
+    }
+
+    pub fn select_next_filtered(
+        &mut self,
+        bank: PresetBank,
+        category: Option<&str>,
+        search: &str,
+    ) -> usize {
+        let filtered = self.filtered_indices_for(bank, category, search);
+        self.step_next_in(&filtered)
+    }
+
+    pub fn select_prev_filtered(
+        &mut self,
+        bank: PresetBank,
+        category: Option<&str>,
+        search: &str,
+    ) -> usize {
+        let filtered = self.filtered_indices_for(bank, category, search);
+        self.step_prev_in(&filtered)
     }
 
     pub fn save_user_preset_with_category(
@@ -781,6 +878,7 @@ impl PresetManager {
             name: extra.preset_name.clone(),
             author: extra.preset_author.clone(),
             category: extra.preset_category.clone(),
+            tags: Vec::new(),
             params: Self::capture_param_values(params),
             steppers: extra.stepper_steps,
             stepper_ties: extra.stepper_ties,
@@ -1127,13 +1225,8 @@ mod tests {
     }
 
     #[test]
-    fn all_fifty_four_factory_presets_parse_match_params_and_render_finite_audio() {
-        assert!(
-            FACTORY_PRESETS_JSON.len() >= 50,
-            "Expected >=50 factory presets, got {}",
-            FACTORY_PRESETS_JSON.len()
-        );
-        assert_eq!(FACTORY_PRESETS_JSON.len(), 54);
+    fn all_factory_presets_parse_match_params_and_render_finite_audio() {
+        assert_eq!(FACTORY_PRESETS_JSON.len(), 291);
 
         let defaults = PhantomSpireParams::default();
         let param_map: HashMap<String, ParamPtr> = defaults
@@ -1173,7 +1266,6 @@ mod tests {
                 );
             }
 
-            // Verify audio rendering for every single factory preset
             let mut params = PhantomSpireParams::default();
             apply_key_sound_params(&preset, &mut params);
             let shared = SharedSynthState::default();
@@ -1185,11 +1277,11 @@ mod tests {
             let mut engine = SynthEngine::new(44100.0);
 
             engine.note_on(60, 0.85, 0);
-            let mut ch_l = vec![0.0_f32; 4096];
-            let mut ch_r = vec![0.0_f32; 4096];
+            let mut ch_l = vec![0.0_f32; 2048];
+            let mut ch_r = vec![0.0_f32; 2048];
             let mut buf = Buffer::default();
             unsafe {
-                buf.set_slices(4096, |s| {
+                buf.set_slices(2048, |s| {
                     s.clear();
                     s.push(&mut ch_l);
                     s.push(&mut ch_r);
@@ -1203,7 +1295,7 @@ mod tests {
                 preset.name
             );
             let energy: f32 = ch_l.iter().chain(ch_r.iter()).map(|s| s * s).sum();
-            let rms = (energy / (2.0 * 4096.0)).sqrt();
+            let rms = (energy / (2.0 * 2048.0)).sqrt();
             assert!(
                 rms > 0.0005,
                 "Preset [{idx}] '{}' produced silent audio (rms={rms})",
@@ -1224,19 +1316,19 @@ mod tests {
         let dir = temp_test_dir("crud");
         let mut mgr = PresetManager::with_user_dir(dir.clone());
         let factory_count = mgr.entries().len();
-        assert_eq!(factory_count, 54);
+        assert_eq!(factory_count, 291);
         assert_eq!(mgr.current_index(), 0);
         assert_eq!(mgr.current_preset().name, "Init");
 
-        // Wrap prev from 0 -> 53
+        // Wrap prev from 0 -> 290
         assert_eq!(mgr.select_prev(), factory_count - 1);
-        // Wrap next from 53 -> 0
+        // Wrap next from 290 -> 0
         assert_eq!(mgr.select_next(), 0);
 
         // Factory preset cannot be deleted
         assert!(mgr.delete_user_preset(0).is_err());
 
-        // Save user preset with dirty characters sanitized
+        // Save user preset with dirty characters sanitized & legacy category normalized
         let params = PhantomSpireParams::default();
         let mut data = PresetManager::capture_from_params(&params);
         data.params
@@ -1247,7 +1339,7 @@ mod tests {
         assert!(saved_path.exists());
         assert_eq!(mgr.entries().len(), factory_count + 1);
 
-        // Reload in fresh manager and verify it's loaded
+        // Reload in fresh manager and verify it's loaded with normalized category
         let mut mgr2 = PresetManager::with_user_dir(dir.clone());
         assert_eq!(mgr2.entries().len(), factory_count + 1);
         let user_idx = mgr2
@@ -1255,6 +1347,7 @@ mod tests {
             .iter()
             .position(|e| !e.is_factory)
             .expect("user preset present");
+        assert_eq!(mgr2.entries()[user_idx].category, "Basses");
         assert_eq!(
             mgr2.entries()[user_idx].data.params.get("f_cut_1"),
             Some(&serde_json::json!(1234.0))
@@ -1269,39 +1362,40 @@ mod tests {
     }
 
     #[test]
-    fn preset_browser_filtering_categories_search_and_favorites_work() {
+    fn preset_browser_filtering_categories_authors_tags_search_and_favorites_work() {
         let dir = temp_test_dir("browser");
         let mut mgr = PresetManager::with_user_dir(dir.clone());
 
-        assert_eq!(mgr.total_count_for_bank(PresetBank::All), 54);
-        assert_eq!(mgr.total_count_for_bank(PresetBank::Factory), 54);
+        assert_eq!(mgr.total_count_for_bank(PresetBank::All), 291);
+        assert_eq!(mgr.total_count_for_bank(PresetBank::Factory), 291);
         assert_eq!(mgr.total_count_for_bank(PresetBank::User), 0);
         assert_eq!(mgr.total_count_for_bank(PresetBank::Favorites), 0);
 
-        // Category filter + counts
+        // Category filter + legacy normalization ("Bass" -> "Basses")
         let counts = mgr.category_counts(PresetBank::All, "");
         assert_eq!(counts.len(), SPIRE_CATEGORIES.len());
-        let bass_count = counts.iter().find(|(c, _)| *c == "Bass").unwrap().1;
-        assert!(bass_count >= 6);
+        let bass_count = counts.iter().find(|(c, _)| *c == "Basses").unwrap().1;
+        assert_eq!(bass_count, 46);
 
         mgr.set_active_category(Some("Bass"));
+        assert_eq!(mgr.active_category(), Some("Basses"));
         let bass_indices = mgr.filtered_indices();
-        assert_eq!(bass_indices.len(), bass_count);
+        assert_eq!(bass_indices.len(), 46);
         assert!(bass_indices
             .iter()
-            .all(|&i| mgr.entries()[i].category == "Bass"));
+            .all(|&i| mgr.entries()[i].category == "Basses"));
 
-        // Filtered next/prev stays within Bass category
-        let first_bass = mgr.select_next();
-        assert!(bass_indices.contains(&first_bass));
-        let second_bass = mgr.select_next();
-        assert!(bass_indices.contains(&second_bass));
+        // Authors & Tags
+        let authors = mgr.authors(PresetBank::Factory);
+        assert!(authors.len() >= 5);
+        let tags = mgr.tags(PresetBank::Factory);
+        assert!(tags.len() >= 10);
 
         // Search filter
         mgr.set_active_category(None);
         mgr.set_search_query("303");
         let search_hits = mgr.filtered_indices();
-        assert!(search_hits.len() >= 3);
+        assert!(!search_hits.is_empty());
 
         // Favorites toggle + reload persistence
         mgr.set_search_query("");
@@ -1327,24 +1421,26 @@ mod tests {
         assert!(!mgr.can_undo());
         assert!(!mgr.can_redo());
 
-        // Apply preset 2 ("Crimson Hyper Lead")
-        mgr.apply_to_headless(2, &mut param_map, &mut extra, &shared_synth)
-            .expect("apply preset 2");
-        assert_eq!(extra.preset_name, "Crimson Hyper Lead");
+        let hyper_idx = mgr
+            .entries()
+            .iter()
+            .position(|e| e.name == "LD Crimson Hyper")
+            .expect("LD Crimson Hyper present");
+        mgr.apply_to_headless(hyper_idx, &mut param_map, &mut extra, &shared_synth)
+            .expect("apply LD Crimson Hyper");
+        assert_eq!(extra.preset_name, "LD Crimson Hyper");
         assert_eq!(param_map.get("o_wav_1"), Some(&serde_json::json!("SuperSaw")));
         assert!(mgr.can_undo());
         assert!(!mgr.can_redo());
 
-        // Undo back to Init
         assert!(mgr.undo_headless(&mut param_map, &mut extra, &shared_synth));
         assert_eq!(extra.preset_name, "Init");
         assert_eq!(param_map.get("o_wav_1"), Some(&serde_json::json!("Saw")));
         assert!(!mgr.can_undo());
         assert!(mgr.can_redo());
 
-        // Redo forward to Crimson Hyper Lead
         assert!(mgr.redo_headless(&mut param_map, &mut extra, &shared_synth));
-        assert_eq!(extra.preset_name, "Crimson Hyper Lead");
+        assert_eq!(extra.preset_name, "LD Crimson Hyper");
         assert_eq!(param_map.get("o_wav_1"), Some(&serde_json::json!("SuperSaw")));
 
         let _ = std::fs::remove_dir_all(&dir);

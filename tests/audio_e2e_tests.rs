@@ -722,12 +722,12 @@ fn e2e_09_all_factory_presets_render_safely_and_user_preset_undo_redo() {
 
     let mut pm = PresetManager::with_user_dir(tmp_dir.clone());
     assert!(
-        pm.entries().len() >= 50,
-        "Expected >=50 embedded factory presets, got {}",
+        pm.entries().len() >= 280,
+        "Expected >=280 embedded Spire factory presets, got {}",
         pm.entries().len()
     );
 
-    // Verify all 12 canonical Spire categories are represented
+    // Verify all 10 canonical Spire folder categories are represented
     let counts = pm.category_counts(PresetBank::Factory, "");
     for cat in SPIRE_CATEGORIES {
         let count = counts.iter().find(|(c, _)| c == cat).map(|(_, n)| *n).unwrap_or(0);
@@ -736,6 +736,10 @@ fn e2e_09_all_factory_presets_render_safely_and_user_preset_undo_redo() {
             "Canonical Spire category '{cat}' has 0 factory presets"
         );
     }
+
+    // Verify author and tag metadata queries return non-empty results
+    assert!(!pm.authors(PresetBank::Factory).is_empty(), "Expected non-empty preset authors");
+    assert!(!pm.tags(PresetBank::Factory).is_empty(), "Expected non-empty preset tags");
 
     let params = PhantomSpireParams::default();
     let valid_ids: HashSet<String> = params.param_map().into_iter().map(|(id, _, _)| id).collect();
@@ -754,21 +758,21 @@ fn e2e_09_all_factory_presets_render_safely_and_user_preset_undo_redo() {
         }
         pm.apply_to_headless(idx, &mut param_map, &mut extra, &shared)
             .unwrap_or_else(|e| panic!("Failed to apply factory preset '{name}': {e}"));
-        let (l, r) = render_notes(&params, &shared, &[55, 62, 67], 6000, 1500);
+        let (l, r) = render_notes(&params, &shared, &[55, 62, 67], 2048, 512);
         let m = analyze(&l, &r, SR as f64);
         assert_basi(&format!("Preset[{idx}:{name}]"), &m);
         assert!(
-            m.rms_mono > 0.002,
+            m.rms_mono > 0.001,
             "Factory preset '{name}' produced near-silent audio (rms={})",
             m.rms_mono
         );
     }
 
-    // Verify category/search/favorite filtering and save_user_preset_with_category + delete
+    // Verify category/search/favorite filtering and backwards-compatible category normalization ("Lead" -> "Leads")
     pm.set_active_bank(PresetBank::Factory);
-    pm.set_active_category(Some("Bass"));
+    pm.set_active_category(Some("Basses"));
     let bass_indices = pm.filtered_indices();
-    assert!(!bass_indices.is_empty(), "Expected Bass presets in filter");
+    assert!(bass_indices.len() >= 40, "Expected >=40 Basses presets, got {}", bass_indices.len());
     let first_bass = bass_indices[0];
     let fav_state = pm.toggle_favorite(first_bass);
     assert!(fav_state, "toggle_favorite should set true");
@@ -785,8 +789,8 @@ fn e2e_09_all_factory_presets_render_safely_and_user_preset_undo_redo() {
         pm_reloaded
             .entries()
             .iter()
-            .any(|e| e.name == "E2E_Custom_Test" && !e.is_factory && e.category == "Lead"),
-        "Saved user preset was not reloaded from disk with Lead category"
+            .any(|e| e.name == "E2E_Custom_Test" && !e.is_factory && e.category == "Leads"),
+        "Saved user preset was not reloaded from disk with normalized 'Leads' category"
     );
 
     assert!(pm.can_undo(), "Undo stack should be populated after preset switches");

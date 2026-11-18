@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex};
 pub mod dsp;
 pub mod params;
 pub mod presets;
+mod presets_factory;
 pub mod ui;
 pub mod updater;
 

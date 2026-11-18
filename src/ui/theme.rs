@@ -618,11 +618,11 @@ pub fn draw_active_note_trapezoid(
 
 pub fn icon_for_category(cat: &str) -> P5Icon {
     let lower = cat.to_ascii_lowercase();
-    if lower.contains("bass") || lower.contains("acid") {
+    if lower.contains("bass") || lower.contains("acid") || lower.contains("drum") {
         P5Icon::Triangle
-    } else if lower.contains("lead") || lower.contains("chord") || lower.contains("brass") {
+    } else if lower.contains("lead") || lower.contains("chord") || lower.contains("brass") || lower.contains("synth") {
         P5Icon::Circle
-    } else if lower.contains("arp") || lower.contains("fx") || lower.contains("pluck") {
+    } else if lower.contains("arp") || lower.contains("seq") || lower.contains("fx") || lower.contains("pluck") {
         P5Icon::Cross
     } else {
         P5Icon::Square
