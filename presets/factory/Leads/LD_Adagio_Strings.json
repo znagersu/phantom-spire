@@ -9,51 +9,218 @@
     "Emotional"
   ],
   "params": {
-    "g_voc": 16,
-    "g_pmod": "Poly",
-    "g_gld": 10.0,
-    "g_glog": false,
-    "g_drft": true,
-    "o_mod_1": "Classic",
-    "o_wav_1": "Strings",
-    "o_ca_1": 0.52,
-    "o_cb_1": 0.0,
-    "o_ucnt_1": 7,
-    "o_udet_1": 0.32,
-    "o_udns_1": 0.68,
-    "o_wid_1": 0.86,
-    "o_lvl_1": 0.82,
-    "o_mod_2": "Classic",
-    "o_wav_2": "SuperSaw",
-    "o_oct_2": 1,
-    "o_ucnt_2": 3,
-    "o_udet_2": 0.22,
-    "o_lvl_2": 0.4,
+    "e_att_1": 0.004000000189989805,
+    "e_att_2": 0.003,
+    "e_dec_1": 0.44999998807907104,
+    "e_dec_2": 0.22,
+    "e_rel_1": 0.18000000715255737,
+    "e_sus_1": 0.8199999928474426,
+    "e_sus_2": 0.12,
+    "es_amt_1_2": 0.22,
+    "es_tgt_1_2": "Filter1 Cutoff",
+    "f_cut_1": 6721.599609375,
+    "f_ktr_1": 0.35,
     "f_mod_1": "Perfecto",
+    "f_res_1": 0.16,
     "f_typ_1": "LP4",
-    "f_cut_1": 6800.0,
-    "f_res_1": 0.15,
-    "f_drv_1": 0.1,
-    "e_att_1": 0.004,
-    "e_dec_1": 0.35,
-    "e_sus_1": 0.85,
-    "e_rel_1": 0.24,
-    "l_rat_1": 5.5,
-    "l_fad_1": 0.35,
+    "g_drft": true,
+    "g_gld": 10.0,
+    "g_glog": true,
+    "g_pmod": "Poly",
+    "g_voc": 10,
+    "k_boos": false,
+    "k_lim": true,
+    "k_vol": 1.5499999523162842,
+    "l_fad_1": 0.32,
+    "l_rat_1": 5.0,
+    "ls_amt_1_1": 0.04,
     "ls_tgt_1_1": "All Pitch",
-    "ls_amt_1_1": 0.05,
-    "x_smod": "Hard",
-    "x_sdrv": 0.42,
-    "x_sdw": 0.24,
+    "o_ca_1": 0.52,
+    "o_cb_1": 0.15,
+    "o_fin_2": 5.0,
+    "o_lvl_1": 0.8399999737739563,
+    "o_lvl_2": 0.34,
+    "o_mod_1": "Classic",
+    "o_mod_2": "Classic",
+    "o_oct_2": 1,
+    "o_ucnt_1": 3,
+    "o_udet_1": 0.2,
+    "o_wav_1": "Saw",
+    "o_wav_2": "Saw",
+    "o_wid_1": 0.58,
+    "x_cloc": 130.0,
+    "x_cmut": false,
+    "x_ddw": 0.18,
+    "x_dfb": 0.34,
+    "x_dmut": false,
     "x_dsyn": true,
-    "x_dsdl": "1/8D",
-    "x_dsdr": "1/4",
-    "x_dfb": 0.4,
-    "x_ddw": 0.26,
-    "x_rmod": "Hall",
-    "x_rdec": 2.6,
-    "x_rdw": 0.24,
-    "k_boos": true,
-    "k_lim": true
+    "x_pmut": false,
+    "x_rdw": 0.18,
+    "x_rmod": "Plate 1",
+    "x_rmut": false,
+    "x_sdrv": 0.25,
+    "x_sdw": 0.14,
+    "x_smod": "Warm",
+    "x_smut": false
+  },
+  "steppers": [
+    [
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ],
+    [
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ]
+  ],
+  "stepper_ties": [
+    0,
+    0
+  ],
+  "arp_pattern": {
+    "steps_enabled": 65535,
+    "step_offsets": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "step_velocities": [
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100
+    ]
+  },
+  "mod_matrix": [
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    }
+  ],
+  "microtuning": {
+    "preset": 0,
+    "cents": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
   }
 }

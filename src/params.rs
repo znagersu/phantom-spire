@@ -911,26 +911,36 @@ impl FilterParams {
         Self {
             model: EnumParam::new(format!("Filter {p} Model"), FilterModel::Perfecto),
             filter_type: EnumParam::new(format!("Filter {p} Type"), default_type),
-            cutoff: FloatParam::new(
-                format!("Filter {p} Cutoff"),
-                default_cut,
-                FloatRange::Skewed {
-                    min: 20.0,
-                    max: 20000.0,
-                    factor: FloatRange::skew_factor(-2.2),
-                },
-            )
-            .with_unit(" Hz")
-            .with_value_to_string(formatters::v2s_f32_hz_then_khz(1))
-            .with_string_to_value(formatters::s2v_f32_hz_then_khz()),
-            resonance: FloatParam::new(
-                format!("Filter {p} Res"),
-                0.0,
-                FloatRange::Linear { min: 0.0, max: 1.0 },
-            )
-            .with_unit(" %")
-            .with_value_to_string(formatters::v2s_f32_percentage(0))
-            .with_string_to_value(formatters::s2v_f32_percentage()),
+            cutoff: {
+                let param = FloatParam::new(
+                    format!("Filter {p} Cutoff"),
+                    default_cut,
+                    FloatRange::Skewed {
+                        min: 20.0,
+                        max: 20000.0,
+                        factor: FloatRange::skew_factor(-1.9),
+                    },
+                )
+                .with_smoother(SmoothingStyle::Logarithmic(15.0))
+                .with_unit(" Hz")
+                .with_value_to_string(formatters::v2s_f32_hz_then_khz(1))
+                .with_string_to_value(formatters::s2v_f32_hz_then_khz());
+                param.smoothed.reset(default_cut);
+                param
+            },
+            resonance: {
+                let param = FloatParam::new(
+                    format!("Filter {p} Res"),
+                    0.0,
+                    FloatRange::Linear { min: 0.0, max: 1.0 },
+                )
+                .with_smoother(SmoothingStyle::Linear(15.0))
+                .with_unit(" %")
+                .with_value_to_string(formatters::v2s_f32_percentage(0))
+                .with_string_to_value(formatters::s2v_f32_percentage());
+                param.smoothed.reset(0.0);
+                param
+            },
             keytrack: FloatParam::new(
                 format!("Filter {p} Keytrack"),
                 0.0,
@@ -1046,12 +1056,18 @@ impl EnvParams {
     pub fn new(idx: usize) -> Self {
         let e = idx + 1;
         let (default_sus, default_vel) = if idx == 0 { (0.8, 0.5) } else { (0.0, 0.0) };
+        // Volume envelope (ENV 1) enforces a 2-5 ms minimum attack/release to stay click-free.
+        let (min_att, default_att, min_rel) = if idx == 0 {
+            (0.0025, 0.003, 0.004)
+        } else {
+            (0.001, 0.002, 0.002)
+        };
         Self {
             attack: FloatParam::new(
                 format!("ENV{e} Attack"),
-                0.002,
+                default_att,
                 FloatRange::Skewed {
-                    min: 0.0005,
+                    min: min_att,
                     max: 10.0,
                     factor: FloatRange::skew_factor(-2.5),
                 },
@@ -1100,7 +1116,7 @@ impl EnvParams {
                 format!("ENV{e} Release"),
                 0.15,
                 FloatRange::Skewed {
-                    min: 0.001,
+                    min: min_rel,
                     max: 15.0,
                     factor: FloatRange::skew_factor(-2.5),
                 },
@@ -1649,7 +1665,7 @@ impl Default for ChorusParams {
             .with_string_to_value(formatters::s2v_f32_percentage()),
             low_cut: FloatParam::new(
                 "Chorus Low Cut",
-                20.0,
+                100.0,
                 FloatRange::Skewed {
                     min: 20.0,
                     max: 2000.0,

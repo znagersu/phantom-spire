@@ -3,5 +3,9 @@ release-staging/
 e2e/tools/
 e2e/.artifacts/
 e2e/midi_audio_harness/target/
+scripts/sound_check/target/
+scripts/preset_batch_check/target/
+scripts/.artifacts/
+best_of_preview.wav
 *.log
 .DS_Store

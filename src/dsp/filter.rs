@@ -101,8 +101,8 @@ impl Svf2Pole {
         let v1 = a1 * self.ic1eq + a2 * v3;
         let v2 = self.ic2eq + a2 * self.ic1eq + a3 * v3;
 
-        self.ic1eq = flush_denormal(2.0 * v1 - self.ic1eq);
-        self.ic2eq = flush_denormal(2.0 * v2 - self.ic2eq);
+        self.ic1eq = flush_denormal(fast_tanh((2.0 * v1 - self.ic1eq) * 0.12) / 0.12);
+        self.ic2eq = flush_denormal(fast_tanh((2.0 * v2 - self.ic2eq) * 0.12) / 0.12);
 
         let low = v2;
         let band = v1;
@@ -168,10 +168,11 @@ impl Ladder4Pole {
         let drv = 1.15 + drive * 3.0;
         let x = fast_tanh(input * drv + 0.06 * input * input) / (1.0 + drive * 0.45);
 
-        let k = res * 3.82;
+        let res_curve = 1.0 - (1.0 - res.clamp(0.0, 1.0)).powf(2.2);
+        let k = res_curve * 3.82;
         let s_sum = g3 * self.s[0] + g2 * self.s[1] + big_g * self.s[2] + self.s[3];
-        // Bass-preserving feedback compensation
-        let comp = 0.42 * k * x;
+        // Bass-preserving passband compensation (~80% of 1/(1+k) ladder drop)
+        let comp = 0.80 * k * x;
         let u = fast_tanh((x + comp - k * s_sum) / (1.0 + k * g4));
 
         let v0 = (u - self.s[0]) * big_g;
@@ -215,39 +216,41 @@ impl Ladder4Pole {
         let drv = 1.6 + drive * 4.5;
         let x = fast_tanh(input * drv * 1.15);
 
-        // High-pass the resonant feedback so sub-bass stays tight while mid-cutoff squelches
+        // High-pass the resonant feedback gently so sub-bass stays tight while mid-cutoff squelches
         let fb_raw = g3 * self.s[0] + g2 * self.s[1] + g * self.s[2] + self.s[3];
-        self.fb_hp = flush_denormal(self.fb_hp + 0.14 * (fb_raw - self.fb_hp));
-        let fb_sq = fb_raw - 0.65 * self.fb_hp;
+        self.fb_hp = flush_denormal(self.fb_hp + 0.04 * (fb_raw - self.fb_hp));
+        let fb_sq = fb_raw - 0.45 * self.fb_hp;
 
-        // Higher diode feedback gain with saturating limiter keeps self-oscillation musical & stable
-        let k = res * 5.2;
-        let fb_sat = fast_tanh(fb_sq * (1.4 + res * 1.2) + 0.08) - 0.079;
-        let u = fast_tanh((x - k * fb_sat) / (1.0 + k * 0.65 * g0 * g3));
+        // Unity small-signal pole gain keeps feedback predictable and prevents premature 4-8 kHz whistling.
+        let res_curve = 1.0 - (1.0 - res.clamp(0.0, 1.0)).powf(2.0);
+        let k = res_curve * 3.65;
+        let comp = 0.62 * k * x;
+        let fb_sat = fast_tanh(fb_sq * (1.1 + res * 0.6));
+        let u = fast_tanh((x + comp - k * fb_sat) / (1.0 + k * 0.65 * g0 * g3));
 
-        // 4 cascaded TPT poles with nonlinear diode shaping (stage 1 at ~2.4x cutoff)
+        // 4 cascaded TPT diode poles (stage 1 at ~2.4x cutoff -> 18 dB/oct response)
         let v0 = (u - self.s[0]) * g0;
-        let y0 = fast_tanh((v0 + self.s[0]) * 1.25);
+        let y0 = fast_tanh(v0 + self.s[0]);
         self.s[0] = flush_denormal(y0 + v0);
 
         let v1 = (y0 - self.s[1]) * g;
-        let y1 = fast_tanh((v1 + self.s[1]) * 1.15);
+        let y1 = fast_tanh(v1 + self.s[1]);
         self.s[1] = flush_denormal(y1 + v1);
 
         let v2 = (y1 - self.s[2]) * g;
-        let y2 = fast_tanh((v2 + self.s[2]) * 1.12);
+        let y2 = fast_tanh(v2 + self.s[2]);
         self.s[2] = flush_denormal(y2 + v2);
 
         let v3 = (y2 - self.s[3]) * g;
-        let y3 = fast_tanh((v3 + self.s[3]) * 1.10);
+        let y3 = fast_tanh(v3 + self.s[3]);
         self.s[3] = flush_denormal(y3 + v3);
 
-        // Emphasize 3-pole/4-pole 18 dB/oct acid bite on LP4
+        // Emphasize 3-pole/4-pole 18 dB/oct acid bite without blowing out high-band squelch
         let out = match filter_type {
-            FilterType::LP4 => 0.45 * y2 + 0.65 * y3 + res * 0.45 * (y1 - y2),
+            FilterType::LP4 => 0.42 * y2 + 0.64 * y3 + res * 0.24 * (y1 - y2),
             _ => Self::pole_mix(u, y0, y1, y2, y3, res, filter_type),
         };
-        fast_tanh(out * (1.1 + res * 0.45))
+        fast_tanh(out * (1.08 + res * 0.25))
     }
 
     #[inline]
@@ -445,11 +448,12 @@ impl FilterChannel {
         scorpio: bool,
         scorpio_drv: f32,
     ) -> f32 {
-        // Damping k: 2.0 at res=0 (critically/Butterworth-ish), down to 0.03 at max res
-        let k_2p = (2.0 - 1.97 * res).clamp(0.03, 2.0);
+        // Exponential-Q curve gives uniform dB-per-% resonance feel instead of bunching at 85..100%.
+        let r = res.clamp(0.0, 1.0);
+        let k_2p = (SQRT_2 * 18.0_f32.powf(-r)).clamp(0.055, SQRT_2);
         // For 4-pole cascade, distribute damping slightly more gently per stage so total Q matches musical expectation
-        let k_4p = (2.0 - 1.85 * res).clamp(0.08, 2.0);
-        let k_lr4 = (SQRT_2 * (1.0 - 0.88 * res)).clamp(0.12, SQRT_2);
+        let k_4p = (SQRT_2 * 10.0_f32.powf(-r)).clamp(0.10, SQRT_2);
+        let k_lr4 = (SQRT_2 * 6.0_f32.powf(-r)).clamp(0.16, SQRT_2);
 
         let g2 = if scorpio { (g * 1.07).min(5.5) } else { g };
 
@@ -577,6 +581,11 @@ impl MultimodeFilter {
 /// `LINK`, and `filter_balance`.
 pub struct DualFilter {
     sample_rate: f32,
+    param_slew: f32,
+    smooth_fc: [f32; 2],
+    smooth_res: [f32; 2],
+    smooth_bal: f32,
+    smooth_init: bool,
     filter1: MultimodeFilter,
     filter2: MultimodeFilter,
 }
@@ -588,8 +597,14 @@ impl DualFilter {
         } else {
             44100.0
         };
+        let param_slew = 1.0 - (-1.0 / (0.006 * sr).max(1.0)).exp();
         Self {
             sample_rate: sr,
+            param_slew,
+            smooth_fc: [18000.0, 20.0],
+            smooth_res: [0.0, 0.0],
+            smooth_bal: 0.0,
+            smooth_init: false,
             filter1: MultimodeFilter::new(sr),
             filter2: MultimodeFilter::new(sr),
         }
@@ -598,12 +613,14 @@ impl DualFilter {
     pub fn set_sample_rate(&mut self, sample_rate: f32) {
         if sample_rate.is_finite() && sample_rate >= 8000.0 {
             self.sample_rate = sample_rate;
+            self.param_slew = 1.0 - (-1.0 / (0.006 * sample_rate).max(1.0)).exp();
             self.filter1.set_sample_rate(sample_rate);
             self.filter2.set_sample_rate(sample_rate);
         }
     }
 
     pub fn reset(&mut self) {
+        self.smooth_init = false;
         self.filter1.reset();
         self.filter2.reset();
     }
@@ -638,8 +655,35 @@ impl DualFilter {
         routing: &FilterRoutingSettings,
         mod_in: &DualFilterModInput,
     ) -> (f32, f32) {
+        let target_fc1 = f1_cfg.cutoff.clamp(20.0, 20000.0);
+        let target_fc2 = f2_cfg.cutoff.clamp(20.0, 20000.0);
+        let target_res1 = f1_cfg.resonance.clamp(0.0, 0.985);
+        let target_res2 = f2_cfg.resonance.clamp(0.0, 0.985);
+        let target_bal = routing.filter_balance.clamp(-1.0, 1.0);
+
+        if !self.smooth_init {
+            self.smooth_fc = [target_fc1, target_fc2];
+            self.smooth_res = [target_res1, target_res2];
+            self.smooth_bal = target_bal;
+            self.smooth_init = true;
+        } else {
+            let s = self.param_slew;
+            // Slew cutoff multiplicatively (log-Hz) when moving so sweeps glide smoothly across octaves
+            for i in 0..2 {
+                let target_fc = if i == 0 { target_fc1 } else { target_fc2 };
+                if (target_fc - self.smooth_fc[i]).abs() < 1e-3 {
+                    self.smooth_fc[i] = target_fc;
+                } else {
+                    self.smooth_fc[i] *= (target_fc / self.smooth_fc[i].max(20.0)).powf(s);
+                }
+                let target_res = if i == 0 { target_res1 } else { target_res2 };
+                self.smooth_res[i] += (target_res - self.smooth_res[i]) * s;
+            }
+            self.smooth_bal += (target_bal - self.smooth_bal) * s;
+        }
+
         let fc1 = Self::effective_cutoff(
-            f1_cfg.cutoff,
+            self.smooth_fc[0],
             f1_cfg.keytrack,
             midi_note,
             mod_in.cutoff_oct[0],
@@ -657,7 +701,7 @@ impl DualFilter {
             (fc1 * 2.0_f32.powf(f2_extra_oct.clamp(-10.0, 10.0))).clamp(20.0, max_fc)
         } else {
             Self::effective_cutoff(
-                f2_cfg.cutoff,
+                self.smooth_fc[1],
                 f2_cfg.keytrack,
                 midi_note,
                 mod_in.cutoff_oct[1],
@@ -665,9 +709,9 @@ impl DualFilter {
             )
         };
 
-        let res1 = (f1_cfg.resonance + mod_in.res[0]).clamp(0.0, 0.985);
-        let res2 = (f2_cfg.resonance + mod_in.res[1]).clamp(0.0, 0.985);
-        let bal = (routing.filter_balance + mod_in.balance).clamp(-1.0, 1.0);
+        let res1 = (self.smooth_res[0] + mod_in.res[0]).clamp(0.0, 0.985);
+        let res2 = (self.smooth_res[1] + mod_in.res[1]).clamp(0.0, 0.985);
+        let bal = (self.smooth_bal + mod_in.balance).clamp(-1.0, 1.0);
 
         if routing.parallel {
             let (y1_l, y1_r) = self.filter1.process_stereo(
@@ -954,5 +998,59 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn resonance_curve_is_musical_and_cutoff_jumps_smooth_cleanly() {
+        let sr = 48000.0;
+        let sine_at_cutoff = saw_stimulus(4096, 1000.0, sr);
+        let mut bp_rms = Vec::new();
+        for &res in &[0.0_f32, 0.25, 0.50, 0.75, 1.0] {
+            let mut f = MultimodeFilter::new(sr);
+            let mut out = Vec::new();
+            for &x in &sine_at_cutoff[1024..] {
+                let (l, _) = f.process_stereo(x * 0.2, x * 0.2, 1000.0, res, 0.0, FilterModel::Perfecto, FilterType::BP2);
+                out.push(l);
+            }
+            bp_rms.push(rms(&out));
+        }
+        for w in bp_rms.windows(2) {
+            assert!(w[1] > w[0], "BP2 resonant output must increase smoothly: {bp_rms:?}");
+        }
+        // Mid-knob res=0.5 should already provide meaningful resonance above res=0.0
+        assert!(
+            bp_rms[2] > bp_rms[0] * 1.4,
+            "Mid-knob resonance=0.5 too weak: {bp_rms:?}"
+        );
+
+        // Sudden 12 kHz -> 120 Hz cutoff step through DualFilter must slew without click transients
+        let mut df = DualFilter::new(sr);
+        let mut f1 = FilterSettings::default();
+        f1.cutoff = 12000.0;
+        let f2 = FilterSettings::default();
+        let routing = FilterRoutingSettings {
+            filter_balance: -1.0,
+            parallel: true,
+            link: false,
+        };
+        let mod_in = DualFilterModInput::default();
+        let mut prev_l = 0.0_f32;
+        for i in 0..1024 {
+            let x = 0.5 * (std::f32::consts::TAU * 440.0 * i as f32 / sr).sin();
+            let (l, _) = df.process_stereo(x, x, 0.0, 0.0, 60.0, &f1, &f2, &routing, &mod_in);
+            prev_l = l;
+        }
+        f1.cutoff = 120.0;
+        let mut max_jump = 0.0_f32;
+        for i in 1024..2048 {
+            let x = 0.5 * (std::f32::consts::TAU * 440.0 * i as f32 / sr).sin();
+            let (l, _) = df.process_stereo(x, x, 0.0, 0.0, 60.0, &f1, &f2, &routing, &mod_in);
+            max_jump = max_jump.max((l - prev_l).abs());
+            prev_l = l;
+        }
+        assert!(
+            max_jump < 0.06,
+            "Sudden cutoff jump caused clicky transient: max_jump={max_jump}"
+        );
     }
 }

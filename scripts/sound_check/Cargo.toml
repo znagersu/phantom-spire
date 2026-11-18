@@ -1,0 +1,11 @@
+[workspace]
+
+[package]
+name = "sound_check"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+vst3-sys = { git = "https://github.com/robbert-vdh/vst3-sys.git", rev = "b3ff4d775940f5b476b9d1cca02a90e07e1922a2" }
+vst3-com = { git = "https://github.com/robbert-vdh/vst3-sys.git", rev = "b3ff4d775940f5b476b9d1cca02a90e07e1922a2" }
+winapi = { version = "0.3", features = ["libloaderapi", "winnt", "minwindef"] }

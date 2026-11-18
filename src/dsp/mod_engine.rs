@@ -354,14 +354,30 @@ impl Envelope6Stage {
     /// Advance one sample using `EnvParams` and optional bipolar Attack/Decay modulations (`-1..1`).
     #[inline]
     pub fn process_sample(&mut self, params: &EnvParams, att_mod: f32, dec_mod: f32) -> f32 {
+        self.process_sample_with_floors(params, att_mod, dec_mod, 0.001, 0.002)
+    }
+
+    /// Advance one sample for a volume/amplitude envelope, enforcing a minimum 2–5 ms
+    /// attack (`min_att_s`) and release (`min_rel_s`) so notes never click on trigger or release.
+    #[inline]
+    pub fn process_sample_with_floors(
+        &mut self,
+        params: &EnvParams,
+        att_mod: f32,
+        dec_mod: f32,
+        min_att_s: f32,
+        min_rel_s: f32,
+    ) -> f32 {
         let att_scale = 2.0_f32.powf(att_mod.clamp(-2.0, 2.0) * 2.0);
         let dec_scale = 2.0_f32.powf(dec_mod.clamp(-2.0, 2.0) * 2.0);
-        let att = (params.attack.value() * att_scale).clamp(0.0003, 20.0);
-        let dec = (params.decay.value() * dec_scale).clamp(0.0005, 25.0);
+        let min_a = min_att_s.max(0.0005);
+        let min_r = min_rel_s.max(0.001);
+        let att = (params.attack.value() * att_scale).clamp(min_a, 20.0);
+        let dec = (params.decay.value() * dec_scale).clamp(0.001, 25.0);
         let sus = params.sustain.value().clamp(0.0, 1.0);
         let slt = params.slt.value().clamp(0.001, 20.0);
         let sll = params.sll.value().clamp(0.0, 1.0);
-        let rel = params.release.value().clamp(0.0005, 25.0);
+        let rel = params.release.value().clamp(min_r, 25.0);
         self.process_sample_raw(att, dec, sus, slt, sll, rel)
     }
 
@@ -385,10 +401,12 @@ impl Envelope6Stage {
                 self.level = 0.0;
             }
             EnvStage::Attack => {
-                let att_samples = (att_s.max(0.0002) * sr).max(1.0);
-                // Punchy exponential rise toward 1.0528 so it reaches 1.0 in ~att_s seconds.
-                let coeff = 1.0 - (-3.0 / att_samples).exp();
-                self.level += (1.0528 - self.level) * coeff;
+                let att_samples = (att_s.max(0.001) * sr).max(1.0);
+                // Punchy exponential rise toward 1.0528 so it reaches 1.0 in ~att_s seconds,
+                // with a gentle S-ease near zero so initial onset stays completely click-free.
+                let base_coeff = 1.0 - (-3.0 / att_samples).exp();
+                let onset_ease = 0.22 + 0.78 * (self.level / 0.06).clamp(0.0, 1.0);
+                self.level += (1.0528 - self.level) * base_coeff * onset_ease;
                 if self.level >= 1.0 {
                     self.level = 1.0;
                     self.stage = EnvStage::Decay;
@@ -1569,12 +1587,17 @@ impl VoiceModState {
         global: &GlobalModFrame,
         bpm: f32,
     ) -> (VoiceModOffsets, GlobalModOffsets, f32) {
-        // 1. Step ENV 1..4 (using 1-sample-delayed attack/decay mod offsets for zero-cycle stability)
+        // 1. Step ENV 1..4 (using 1-sample-delayed attack/decay mod offsets for zero-cycle stability).
+        // ENV 1 (volume envelope) enforces a 2.5 ms minimum attack and 4.0 ms minimum release.
         let mut env_vals = [0.0_f32; 4];
         for i in 0..4 {
             let att_m = if i < 2 { self.prev_env_att_mod[i] } else { 0.0 };
             let dec_m = if i < 2 { self.prev_env_dec_mod[i] } else { 0.0 };
-            env_vals[i] = self.envs[i].process_sample(&params.envs[i], att_m, dec_m);
+            env_vals[i] = if i == 0 {
+                self.envs[i].process_sample_with_floors(&params.envs[i], att_m, dec_m, 0.0025, 0.004)
+            } else {
+                self.envs[i].process_sample(&params.envs[i], att_m, dec_m)
+            };
         }
 
         // 2. Step LFO 1..4 (mono LFOs come from GlobalModFrame; poly LFOs step per voice)
@@ -2066,5 +2089,56 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn volume_envelope_enforces_click_free_minimum_attack_and_release() {
+        let sr = 44100.0;
+        let mut params = EnvParams::new(0);
+        set_float_param(&mut params.attack, 0.0001);
+        set_float_param(&mut params.sustain, 1.0);
+        set_float_param(&mut params.release, 0.0001);
+
+        let mut env = Envelope6Stage::new(sr);
+        env.note_on(1.0, false);
+
+        // Even with extreme negative att_mod, attack takes >= ~2.5 ms and has no initial step click
+        let mut prev = 0.0_f32;
+        let mut max_att_jump = 0.0_f32;
+        let mut reached_half_at = 0usize;
+        for s in 0..400 {
+            let v = env.process_sample_with_floors(&params, -1.5, 0.0, 0.0025, 0.004);
+            max_att_jump = max_att_jump.max((v - prev).abs());
+            if reached_half_at == 0 && v >= 0.5 {
+                reached_half_at = s + 1;
+            }
+            prev = v;
+        }
+        assert!(
+            max_att_jump < 0.04,
+            "Attack step jump too large (clicky): {max_att_jump}"
+        );
+        assert!(
+            reached_half_at >= 20,
+            "Attack rose too fast (<20 samples): {reached_half_at}"
+        );
+
+        env.note_off();
+        let mut max_rel_jump = 0.0_f32;
+        let mut active_after_2ms = false;
+        for s in 0..400 {
+            let v = env.process_sample_with_floors(&params, 0.0, 0.0, 0.0025, 0.004);
+            max_rel_jump = max_rel_jump.max((v - prev).abs());
+            if s == ((0.002 * sr) as usize) && v > 0.05 {
+                active_after_2ms = true;
+            }
+            prev = v;
+        }
+        assert!(
+            max_rel_jump < 0.04,
+            "Release step jump too large (clicky): {max_rel_jump}"
+        );
+        assert!(active_after_2ms, "Release finished too abruptly (< 2ms)");
+        assert!(!env.is_active(), "Envelope should finish release within 400 samples");
     }
 }

@@ -9,39 +9,201 @@
     "Punch"
   ],
   "params": {
-    "g_voc": 8,
-    "o_mod_1": "Classic",
-    "o_wav_1": "Sin",
-    "o_oct_1": -2,
-    "o_ca_1": 0.62,
-    "o_lvl_1": 0.88,
-    "o_mod_2": "Classic",
-    "o_wav_2": "Sub",
-    "o_oct_2": -1,
-    "o_ca_2": 0.55,
-    "o_lvl_2": 0.42,
-    "f_mod_1": "Perfecto",
-    "f_typ_1": "LP4",
-    "f_cut_1": 180.0,
-    "f_res_1": 0.28,
-    "e_att_1": 0.001,
-    "e_dec_1": 0.28,
-    "e_sus_1": 0.08,
-    "e_rel_1": 0.196,
+    "e_att_1": 0.003000000026077032,
     "e_att_2": 0.001,
+    "e_dec_1": 0.44999998807907104,
     "e_dec_2": 0.055,
+    "e_rel_1": 0.11999999731779099,
+    "e_sus_1": 0.3199999928474426,
     "e_sus_2": 0.0,
-    "e_rel_2": 0.05,
+    "es_amt_1_2": 0.42,
     "es_tgt_1_2": "All Pitch",
-    "es_amt_1_2": 0.72,
-    "x_smod": "Tube",
-    "x_sdrv": 0.5,
-    "x_sbit": 0.0,
-    "x_sdw": 0.3,
-    "x_rmod": "Room",
-    "x_rdec": 0.8,
+    "f_cut_1": 2200.0,
+    "f_mod_1": "Perfecto",
+    "f_res_1": 0.12,
+    "f_typ_1": "LP2",
+    "g_pmod": "Mono 1",
+    "g_voc": 4,
+    "k_boos": false,
+    "k_lim": true,
+    "k_vol": 1.5499999523162842,
+    "o_lvl_1": 0.8399999737739563,
+    "o_lvl_2": 0.24,
+    "o_mod_1": "Classic",
+    "o_mod_2": "Classic",
+    "o_oct_1": -1,
+    "o_oct_2": 0,
+    "o_wav_1": "Sin",
+    "o_wav_2": "Tri",
+    "x_cloc": 130.0,
+    "x_cmut": false,
+    "x_dmut": false,
+    "x_pmut": false,
     "x_rdw": 0.0,
-    "k_boos": true,
-    "k_lim": true
+    "x_rmut": false,
+    "x_sdrv": 0.28,
+    "x_sdw": 0.16,
+    "x_smod": "Warm",
+    "x_smut": false
+  },
+  "steppers": [
+    [
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ],
+    [
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ]
+  ],
+  "stepper_ties": [
+    0,
+    0
+  ],
+  "arp_pattern": {
+    "steps_enabled": 65535,
+    "step_offsets": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "step_velocities": [
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100
+    ]
+  },
+  "mod_matrix": [
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    }
+  ],
+  "microtuning": {
+    "preset": 0,
+    "cents": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
   }
 }

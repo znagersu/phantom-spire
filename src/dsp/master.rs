@@ -478,6 +478,15 @@ impl DcBlocker {
     }
 }
 
+#[inline]
+fn soft_knee_sample(x: f32, knee: f32, span: f32) -> f32 {
+    if x.abs() > knee {
+        x.signum() * (knee + span * ((x.abs() - knee) / span).tanh())
+    } else {
+        x
+    }
+}
+
 pub struct MasterSection {
     sample_rate: f32,
     pub x_comp: XComp,
@@ -493,6 +502,7 @@ pub struct MasterSection {
     dc_r_coeff: f32,
     // Safety limiter envelope
     lim_env: f32,
+    lim_att_coeff: f32,
     lim_rel_coeff: f32,
 }
 
@@ -516,6 +526,7 @@ impl MasterSection {
             dc_r: DcBlocker::default(),
             dc_r_coeff: 0.9985,
             lim_env: 0.0,
+            lim_att_coeff: 0.1,
             lim_rel_coeff: 0.001,
         };
         m.recompute_character_filters();
@@ -549,8 +560,9 @@ impl MasterSection {
         self.boost_air.coeffs = BiquadCoeffs::high_shelf(5500.0, 0.7, 2.4, sr);
         // 10 Hz DC blocker
         self.dc_r_coeff = (1.0 - TAU * 10.0 / sr).clamp(0.95, 0.9999);
-        // Smooth 65 ms limiter release
-        self.lim_rel_coeff = 1.0 - (-1.0 / (0.065 * sr).max(1.0)).exp();
+        // Smooth 0.3 ms attack / 75 ms release soft-knee limiter envelope
+        self.lim_att_coeff = 1.0 - (-1.0 / (0.0003 * sr).max(1.0)).exp();
+        self.lim_rel_coeff = 1.0 - (-1.0 / (0.075 * sr).max(1.0)).exp();
     }
 
     /// Process one stereo sample through the full Master chain.
@@ -627,28 +639,32 @@ impl MasterSection {
         l = self.dc_l.process(l, self.dc_r_coeff);
         r = self.dc_r.process(r, self.dc_r_coeff);
 
-        // 6. Brickwall Safety Limiter (guarantees peak <= 0.99 always)
+        // 6. Gentle Soft-Knee Output Limiter & Saturation (keeps chords clean & peak <= 0.99)
         let peak = l.abs().max(r.abs());
         if params.soft_limit.value() {
-            // Instant attack on overshoots, smooth release
-            if peak > self.lim_env {
-                self.lim_env = peak;
+            let coeff = if peak > self.lim_env {
+                self.lim_att_coeff
             } else {
-                self.lim_env = flush_denormal(self.lim_env + (peak - self.lim_env) * self.lim_rel_coeff);
-            }
-            const CEILING: f32 = 0.95;
-            if self.lim_env > CEILING {
-                let lim_gain = CEILING / self.lim_env;
+                self.lim_rel_coeff
+            };
+            self.lim_env = flush_denormal(self.lim_env + (peak - self.lim_env) * coeff);
+
+            const LIM_THRESH: f32 = 0.84;
+            const LIM_HEADROOM: f32 = 0.08; // Asymptotic ceiling 0.92
+            if self.lim_env > LIM_THRESH {
+                let over = self.lim_env - LIM_THRESH;
+                let target_env = LIM_THRESH + LIM_HEADROOM * (over / LIM_HEADROOM).tanh();
+                let lim_gain = target_env / self.lim_env;
                 l *= lim_gain;
                 r *= lim_gain;
             }
-            // Final smooth knee for any inter-sample peak approaching 0.99
-            if l.abs() > 0.95 {
-                l = l.signum() * (0.95 + 0.04 * ((l.abs() - 0.95) * 15.0).tanh());
-            }
-            if r.abs() > 0.95 {
-                r = r.signum() * (0.95 + 0.04 * ((r.abs() - 0.95) * 15.0).tanh());
-            }
+            // Transparent soft-knee transient catcher from 0.88 -> 0.98
+            l = soft_knee_sample(l, 0.88, 0.10);
+            r = soft_knee_sample(r, 0.88, 0.10);
+        } else {
+            // Even with soft_limit disabled, gently round harsh digital clipping spikes above 0.92 -> 0.985
+            l = soft_knee_sample(l, 0.92, 0.065);
+            r = soft_knee_sample(r, 0.92, 0.065);
         }
 
         // Absolute brickwall finite safety guard (peak <= 0.99)

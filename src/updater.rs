@@ -272,11 +272,14 @@ impl UpdaterConfig {
     pub fn from_env() -> Self {
         let mut cfg = Self::default();
 
-        // When launched as Standalone `phantom_spire.exe` from a user-chosen folder
-        // (e.g. Downloads or Desktop), update that exact executable in-place rather than
-        // relocating it to AppData and deleting the user's running EXE.
+        // When launched as Standalone `phantom_spire.exe` or VST3 `phantom_spire.vst3` from a
+        // user-chosen or system folder (e.g. Program Files, custom DAW VST3 dir, Downloads, Desktop),
+        // update that exact active target in-place rather than relocating it and deleting itself.
         if let Some(active_exe) = detect_active_standalone_exe(&cfg.temp_dir) {
             cfg.canonical_exe_path = active_exe;
+        }
+        if let Some(active_vst3) = detect_active_vst3_bundle(&cfg.temp_dir) {
+            cfg.canonical_vst3_dir = active_vst3;
         }
 
         // Layer 1: Optional config file (explicit env path or %APPDATA%\PhantomSpire\updater.json)
@@ -1274,22 +1277,75 @@ pub fn current_module_path() -> Option<PathBuf> {
     std::env::current_exe().ok()
 }
 
+fn is_ephemeral_or_build_path(path: &Path, temp_dir: &Path) -> bool {
+    let key = normalize_path_key(path);
+    let temp_key = normalize_path_key(temp_dir);
+    key.contains("\\target\\")
+        || key.contains("/target/")
+        || key.contains("phantomspiretrash-")
+        || key.contains(".phantomspiretrash-")
+        || (!temp_key.is_empty()
+            && (key.starts_with(&format!("{temp_key}\\"))
+                || key.starts_with(&format!("{temp_key}/"))))
+}
+
 fn detect_active_standalone_exe(temp_dir: &Path) -> Option<PathBuf> {
     let mod_path = current_module_path()?;
     let name = mod_path.file_name()?.to_str()?;
-    if !name.eq_ignore_ascii_case("phantom_spire.exe") || !mod_path.is_file() {
-        return None;
-    }
-    let key = normalize_path_key(&mod_path);
-    let temp_key = normalize_path_key(temp_dir);
-    if key.contains("\\target\\")
-        || key.contains("phantomspiretrash-")
-        || key.contains(".phantomspiretrash-")
-        || (!temp_key.is_empty() && key.starts_with(&format!("{temp_key}\\")))
+    if !name.eq_ignore_ascii_case("phantom_spire.exe")
+        || !mod_path.is_file()
+        || is_ephemeral_or_build_path(&mod_path, temp_dir)
     {
         return None;
     }
     Some(mod_path)
+}
+
+fn detect_active_vst3_bundle(temp_dir: &Path) -> Option<PathBuf> {
+    let mod_path = current_module_path()?;
+    let name = mod_path.file_name()?.to_str()?;
+    if !name.eq_ignore_ascii_case("phantom_spire.vst3")
+        || is_ephemeral_or_build_path(&mod_path, temp_dir)
+    {
+        return None;
+    }
+    for anc in mod_path.ancestors() {
+        let is_bundle = anc
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|n| n.eq_ignore_ascii_case("phantom_spire.vst3"))
+            .unwrap_or(false)
+            && anc.is_dir();
+        if is_bundle && anc.join("Contents").join("x86_64-win").join("phantom_spire.vst3").is_file()
+        {
+            return Some(anc.to_path_buf());
+        }
+    }
+    None
+}
+
+fn collect_active_self_protected_keys(temp_dir: &Path) -> HashSet<String> {
+    let mut keys = HashSet::new();
+    let Some(mod_path) = current_module_path() else {
+        return keys;
+    };
+    if is_ephemeral_or_build_path(&mod_path, temp_dir) {
+        return keys;
+    }
+    let Some(name) = mod_path.file_name().and_then(|n| n.to_str()) else {
+        return keys;
+    };
+    let lower = name.to_ascii_lowercase();
+    if matches!(
+        lower.as_str(),
+        "phantom_spire.exe" | "phantom_spire.vst3" | "phantom_spire.clap"
+    ) {
+        keys.insert(normalize_path_key(&mod_path));
+        if let Some(bundle) = detect_active_vst3_bundle(temp_dir) {
+            keys.insert(normalize_path_key(&bundle));
+        }
+    }
+    keys
 }
 
 /// Detects the currently loaded plugin bundle (`.vst3`) or standalone executable via `GetModuleHandleExW`.
@@ -1642,11 +1698,21 @@ fn move_locked_children_out(dir: &Path, trash_dir: &Path) -> Result<bool, String
                     dest.display()
                 )
             })?;
-            schedule_delete_on_reboot_best_effort(&dest);
             moved_any = true;
         }
     }
     Ok(moved_any)
+}
+
+fn schedule_trash_cleanup_best_effort(trash_path: &Path) {
+    if trash_path.is_dir() {
+        if let Ok(entries) = fs::read_dir(trash_path) {
+            for entry in entries.flatten() {
+                schedule_trash_cleanup_best_effort(&entry.path());
+            }
+        }
+    }
+    schedule_delete_on_reboot_best_effort(trash_path);
 }
 
 fn remove_or_hot_swap(target: &Path, config: &UpdaterConfig) -> Result<RemoveOutcome, String> {
@@ -1667,7 +1733,8 @@ fn remove_or_hot_swap(target: &Path, config: &UpdaterConfig) -> Result<RemoveOut
     }
 
     // File or bundle is locked in RAM (e.g. DAW holding VST3 DLL or running EXE).
-    // NTFS allows moving locked files on the same volume out of the canonical folder!
+    // NTFS allows moving locked files on the same volume out of the canonical folder.
+    // Reboot-delete scheduling is deferred until after replacement succeeds (or confirmed cleanse).
     let trash_dir = select_same_volume_trash_dir(target, config)?;
     let leaf = target
         .file_name()
@@ -1676,7 +1743,6 @@ fn remove_or_hot_swap(target: &Path, config: &UpdaterConfig) -> Result<RemoveOut
     let dest = trash_dir.join(format!("{leaf}.{}", unique_nonce()));
 
     if fs::rename(target, &dest).is_ok() {
-        schedule_delete_on_reboot_best_effort(&dest);
         return Ok(RemoveOutcome::HotSwappedToTrash(dest));
     }
 
@@ -1706,9 +1772,8 @@ fn remove_or_hot_swap(target: &Path, config: &UpdaterConfig) -> Result<RemoveOut
 fn scan_dir_for_stale(
     dir: &Path,
     depth: usize,
+    protected_keys: &HashSet<String>,
     canon_vst3_key: &str,
-    canon_vst3_dll_key: &str,
-    canon_exe_key: &str,
     seen: &mut HashSet<String>,
     out: &mut StaleDiscovery,
 ) {
@@ -1737,16 +1802,18 @@ fn scan_dir_for_stale(
 
         if lower == "phantom_spire.vst3" {
             if ft.is_dir() {
-                if key == canon_vst3_key {
-                    // Canonical bundle: check ONLY for legacy nested bundles or .bak inside it
-                    scan_canonical_vst3_for_nested(&p, seen, out);
+                if protected_keys.contains(&key) {
+                    if key == canon_vst3_key {
+                        // Canonical bundle: check ONLY for legacy nested bundles or .bak inside it
+                        scan_canonical_vst3_for_nested(&p, seen, out);
+                    }
                 } else if seen.insert(key) {
                     out.stale_vst3.push(p);
                 }
                 continue; // Do not recurse inside VST3 bundles
             } else if ft.is_file() {
-                // Never flag the legitimate DLL inside canonical_vst3_dir/Contents/x86_64-win/
-                if key != canon_vst3_dll_key && seen.insert(key) {
+                // Never flag protected canonical/active VST3 DLL
+                if !protected_keys.contains(&key) && seen.insert(key) {
                     out.stale_vst3.push(p);
                 }
                 continue;
@@ -1761,21 +1828,21 @@ fn scan_dir_for_stale(
         }
 
         if lower == "phantom_spire.clap" {
-            if seen.insert(key) {
+            if !protected_keys.contains(&key) && seen.insert(key) {
                 out.stale_clap.push(p);
             }
             continue;
         }
 
         if lower == "phantom_spire.exe" && ft.is_file() {
-            if key != canon_exe_key && seen.insert(key) {
+            if !protected_keys.contains(&key) && seen.insert(key) {
                 out.stale_exe.push(p);
             }
             continue;
         }
 
         if ft.is_dir() {
-            // Skip VCS / build / hidden trash folders during stale scan
+            // Skip VCS / build / hidden trash / updater staging folders during stale scan
             if lower == ".git"
                 || lower == "node_modules"
                 || lower == "target"
@@ -1783,18 +1850,13 @@ fn scan_dir_for_stale(
                 || lower == "release-staging"
                 || lower == "e2e"
                 || lower.starts_with(&LOCAL_TRASH_PREFIX.to_ascii_lowercase())
+                || lower.starts_with(&TRASH_TEMP_PREFIX.to_ascii_lowercase())
+                || lower.starts_with(&UPDATE_TEMP_PREFIX.to_ascii_lowercase())
+                || lower.starts_with(&CLEANSE_TEMP_PREFIX.to_ascii_lowercase())
             {
                 continue;
             }
-            scan_dir_for_stale(
-                &p,
-                depth - 1,
-                canon_vst3_key,
-                canon_vst3_dll_key,
-                canon_exe_key,
-                seen,
-                out,
-            );
+            scan_dir_for_stale(&p, depth - 1, protected_keys, canon_vst3_key, seen, out);
         }
     }
 }
@@ -1843,15 +1905,22 @@ fn scan_canonical_vst3_for_nested(
     }
 }
 
-pub fn discover_stale_copies(config: &UpdaterConfig) -> StaleDiscovery {
-    let canon_vst3_key = normalize_path_key(&config.canonical_vst3_dir);
+fn collect_protected_keys(config: &UpdaterConfig) -> HashSet<String> {
+    let mut keys = collect_active_self_protected_keys(&config.temp_dir);
+    keys.insert(normalize_path_key(&config.canonical_vst3_dir));
     let canon_vst3_dll = config
         .canonical_vst3_dir
         .join("Contents")
         .join("x86_64-win")
         .join("phantom_spire.vst3");
-    let canon_vst3_dll_key = normalize_path_key(&canon_vst3_dll);
-    let canon_exe_key = normalize_path_key(&config.canonical_exe_path);
+    keys.insert(normalize_path_key(&canon_vst3_dll));
+    keys.insert(normalize_path_key(&config.canonical_exe_path));
+    keys
+}
+
+pub fn discover_stale_copies(config: &UpdaterConfig) -> StaleDiscovery {
+    let canon_vst3_key = normalize_path_key(&config.canonical_vst3_dir);
+    let protected_keys = collect_protected_keys(config);
 
     let mut seen = HashSet::new();
     let mut discovery = StaleDiscovery::default();
@@ -1882,50 +1951,11 @@ pub fn discover_stale_copies(config: &UpdaterConfig) -> StaleDiscovery {
         scan_dir_for_stale(
             &root,
             6,
+            &protected_keys,
             &canon_vst3_key,
-            &canon_vst3_dll_key,
-            &canon_exe_key,
             &mut seen,
             &mut discovery,
         );
-    }
-
-    // If the currently loaded module itself is a stale phantom_spire.* strictly inside
-    // one of the configured scan roots (e.g. deeply nested > 6 levels), include it too.
-    // Never wander outside configured scan roots (protects target/bundled during sandboxed E2E).
-    if let Ok((active_target, _)) = detect_active_target() {
-        let within_scan_root = config.scan_roots.iter().any(|root| {
-            if !root.is_dir() {
-                return false;
-            }
-            let rkey = normalize_path_key(root);
-            let akey = normalize_path_key(&active_target);
-            akey == rkey || akey.starts_with(&format!("{rkey}\\"))
-        });
-        if within_scan_root {
-            if let Some(name) = active_target.file_name().and_then(|n| n.to_str()) {
-                let lower = name.to_ascii_lowercase();
-                let akey = normalize_path_key(&active_target);
-                match lower.as_str() {
-                    "phantom_spire.vst3" if akey != canon_vst3_key => {
-                        if seen.insert(akey) {
-                            discovery.stale_vst3.push(active_target);
-                        }
-                    }
-                    "phantom_spire.clap" => {
-                        if seen.insert(akey) {
-                            discovery.stale_clap.push(active_target);
-                        }
-                    }
-                    "phantom_spire.exe" if akey != canon_exe_key => {
-                        if seen.insert(akey) {
-                            discovery.stale_exe.push(active_target);
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
     }
 
     discovery
@@ -2089,32 +2119,49 @@ fn run_cleanse_internal(
         ));
     }
 
-    // Seed missing canonical install(s) BEFORE removing stale copies
+    // Seed missing canonical install(s) BEFORE removing any stale copies.
+    // Never ignore errors or wipe stale copies before verifying the canonical target exists!
     if let Some(ref src_vst3) = seed_vst3 {
         let dll = src_vst3
             .join("Contents")
             .join("x86_64-win")
             .join("phantom_spire.vst3");
-        if let Ok(hash) = sha256_file(&dll) {
-            let _ = install_vst3_bundle_atomic(src_vst3, &hash, config)?;
+        let hash = sha256_file(&dll)?;
+        let _ = install_vst3_bundle_atomic(src_vst3, &hash, config)?;
+        if !canonical_vst3_is_healthy(config) {
+            return Err(format!(
+                "Aborted cleanse: canonical VST3 could not be seeded at '{}'",
+                config.canonical_vst3_dir.display()
+            ));
         }
     }
     if let Some(ref src_exe) = seed_exe {
-        if let Ok(hash) = sha256_file(src_exe) {
-            let _ = install_exe_atomic(src_exe, &hash, config)?;
+        let hash = sha256_file(src_exe)?;
+        let _ = install_exe_atomic(src_exe, &hash, config)?;
+        if !canonical_exe_is_healthy(config) {
+            return Err(format!(
+                "Aborted cleanse: canonical EXE could not be seeded at '{}'",
+                config.canonical_exe_path.display()
+            ));
         }
     }
 
+    let protected_keys = collect_protected_keys(config);
     let mut report = CleanseReport::default();
 
     for path in stale_paths {
+        // Double-check belt-and-suspenders guard so cleanse NEVER deletes canonical or active self.
+        if protected_keys.contains(&normalize_path_key(&path)) {
+            continue;
+        }
         match remove_or_hot_swap(&path, config)? {
             RemoveOutcome::NotFound => {}
             RemoveOutcome::Deleted => {
                 report.stale_removed += 1;
                 report.removed_paths.push(path);
             }
-            RemoveOutcome::HotSwappedToTrash(_) => {
+            RemoveOutcome::HotSwappedToTrash(trash_path) => {
+                schedule_trash_cleanup_best_effort(&trash_path);
                 report.stale_hot_swapped += 1;
                 report.removed_paths.push(path);
             }
@@ -2304,18 +2351,62 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
 
 fn rename_with_av_retry(from: &Path, to: &Path) -> std::io::Result<()> {
     let mut last_err = None;
-    for attempt in 0..16 {
+    for attempt in 0..24 {
         match fs::rename(from, to) {
             Ok(()) => return Ok(()),
             Err(e) => {
                 last_err = Some(e);
-                if attempt < 15 {
-                    std::thread::sleep(std::time::Duration::from_millis(50));
+                if attempt < 23 {
+                    let wait_ms = 30 + (attempt as u64).min(8) * 15;
+                    std::thread::sleep(std::time::Duration::from_millis(wait_ms));
                 }
             }
         }
     }
     Err(last_err.unwrap_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "rename failed")))
+}
+
+fn finalize_exe_with_av_retry(staged: &Path, target: &Path) -> std::io::Result<()> {
+    let mut last_err = None;
+    for attempt in 0..24 {
+        match fs::rename(staged, target) {
+            Ok(()) => return Ok(()),
+            Err(e) => {
+                last_err = Some(e);
+                if attempt >= 4 && fs::copy(staged, target).is_ok() {
+                    let _ = fs::remove_file(staged);
+                    return Ok(());
+                }
+                if attempt < 23 {
+                    let wait_ms = 30 + (attempt as u64).min(8) * 15;
+                    std::thread::sleep(std::time::Duration::from_millis(wait_ms));
+                }
+            }
+        }
+    }
+    Err(last_err.unwrap_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "finalize failed")))
+}
+
+/// Moves existing `target` aside before placing staged replacement, supporting rollback.
+fn move_existing_target_to_backup(
+    target: &Path,
+    parent: &Path,
+    bak_prefix: &str,
+    config: &UpdaterConfig,
+) -> Result<(bool, Option<PathBuf>), String> {
+    if !target.exists() {
+        return Ok((false, None));
+    }
+    if !is_path_locked(target) {
+        let bak = parent.join(format!("{STAGING_ENTRY_PREFIX}{bak_prefix}.bak-{}", unique_nonce()));
+        if fs::rename(target, &bak).is_ok() {
+            return Ok((false, Some(bak)));
+        }
+    }
+    match remove_or_hot_swap(target, config)? {
+        RemoveOutcome::HotSwappedToTrash(p) => Ok((true, Some(p))),
+        RemoveOutcome::Deleted | RemoveOutcome::NotFound => Ok((false, None)),
+    }
 }
 
 /// Atomically installs a new VST3 bundle into `canonical_vst3_dir` with rollback on failure
@@ -2354,43 +2445,13 @@ fn install_vst3_bundle_atomic(
         return Err(String::from("Pre-swap SHA-256 verification failed for VST3 bundle"));
     }
 
-    // Move old bundle aside (backup/trash) BEFORE placing new bundle so rollback is possible
-    let mut hot_swapped = false;
-    let mut backup_path: Option<PathBuf> = None;
-
-    if target.exists() {
-        let locked = is_path_locked(target);
-        if locked {
-            match remove_or_hot_swap(target, config) {
-                Ok(RemoveOutcome::HotSwappedToTrash(p)) => {
-                    hot_swapped = true;
-                    backup_path = Some(p);
-                }
-                Ok(RemoveOutcome::Deleted) | Ok(RemoveOutcome::NotFound) => {}
-                Err(e) => {
-                    let _ = fs::remove_dir_all(&staged);
-                    return Err(e);
-                }
-            }
-        } else {
-            let bak = parent.join(format!("{STAGING_ENTRY_PREFIX}vst3.bak-{}", unique_nonce()));
-            if fs::rename(target, &bak).is_ok() {
-                backup_path = Some(bak);
-            } else {
-                match remove_or_hot_swap(target, config) {
-                    Ok(RemoveOutcome::HotSwappedToTrash(p)) => {
-                        hot_swapped = true;
-                        backup_path = Some(p);
-                    }
-                    Ok(_) => {}
-                    Err(e) => {
-                        let _ = fs::remove_dir_all(&staged);
-                        return Err(e);
-                    }
-                }
-            }
+    let (hot_swapped, backup_path) = match move_existing_target_to_backup(target, parent, "vst3", config) {
+        Ok(v) => v,
+        Err(e) => {
+            let _ = fs::remove_dir_all(&staged);
+            return Err(e);
         }
-    }
+    };
 
     if let Err(e) = rename_with_av_retry(&staged, target) {
         let _ = fs::remove_dir_all(&staged);
@@ -2410,10 +2471,9 @@ fn install_vst3_bundle_atomic(
         .join("phantom_spire.vst3");
     let final_hash = sha256_file(&installed_dll).unwrap_or_default();
     if !final_hash.eq_ignore_ascii_case(expected_dll_hash) {
-        // Rollback!
         let _ = fs::remove_dir_all(target);
         if let Some(ref bak) = backup_path {
-            let _ = fs::rename(bak, target);
+            let _ = rename_with_av_retry(bak, target);
         }
         return Err(format!(
             "Post-install SHA-256 verification failed for '{}'",
@@ -2421,9 +2481,10 @@ fn install_vst3_bundle_atomic(
         ));
     }
 
-    // Delete unlocked backup immediately (locked backups stay in trash until unlocked/cleanse)
     if let Some(ref bak) = backup_path {
-        if !hot_swapped {
+        if hot_swapped {
+            schedule_trash_cleanup_best_effort(bak);
+        } else {
             let _ = fs::remove_dir_all(bak);
         }
     }
@@ -2463,64 +2524,30 @@ fn install_exe_atomic(
         return Err(String::from("Pre-swap SHA-256 verification failed for phantom_spire.exe"));
     }
 
-    let mut hot_swapped = false;
-    let mut backup_path: Option<PathBuf> = None;
-
-    if target.exists() {
-        let locked = is_file_locked(target);
-        if locked {
-            match remove_or_hot_swap(target, config) {
-                Ok(RemoveOutcome::HotSwappedToTrash(p)) => {
-                    hot_swapped = true;
-                    backup_path = Some(p);
-                }
-                Ok(RemoveOutcome::Deleted) | Ok(RemoveOutcome::NotFound) => {}
-                Err(e) => {
-                    let _ = fs::remove_file(&staged);
-                    return Err(e);
-                }
-            }
-        } else {
-            let bak = parent.join(format!("{STAGING_ENTRY_PREFIX}exe.bak-{}", unique_nonce()));
-            if fs::rename(target, &bak).is_ok() {
-                backup_path = Some(bak);
-            } else {
-                match remove_or_hot_swap(target, config) {
-                    Ok(RemoveOutcome::HotSwappedToTrash(p)) => {
-                        hot_swapped = true;
-                        backup_path = Some(p);
-                    }
-                    Ok(_) => {}
-                    Err(e) => {
-                        let _ = fs::remove_file(&staged);
-                        return Err(e);
-                    }
-                }
-            }
-        }
-    }
-
-    if let Err(e) = rename_with_av_retry(&staged, target) {
-        // Fallback: if Windows Defender / AV still briefly locked rename, copy into place directly
-        if fs::copy(&staged, target).is_ok() {
+    let (hot_swapped, backup_path) = match move_existing_target_to_backup(target, parent, "exe", config) {
+        Ok(v) => v,
+        Err(e) => {
             let _ = fs::remove_file(&staged);
-        } else {
-            let _ = fs::remove_file(&staged);
-            if let Some(ref bak) = backup_path {
-                let _ = rename_with_av_retry(bak, target);
-            }
-            return Err(format!(
-                "Failed to finalize EXE install at '{}': {e}",
-                target.display()
-            ));
+            return Err(e);
         }
+    };
+
+    if let Err(e) = finalize_exe_with_av_retry(&staged, target) {
+        if let Some(ref bak) = backup_path {
+            let _ = rename_with_av_retry(bak, target);
+        }
+        let _ = fs::remove_file(&staged);
+        return Err(format!(
+            "Failed to finalize EXE install at '{}': {e}",
+            target.display()
+        ));
     }
 
     let final_hash = sha256_file(target).unwrap_or_default();
     if !final_hash.eq_ignore_ascii_case(expected_exe_hash) {
         let _ = fs::remove_file(target);
         if let Some(ref bak) = backup_path {
-            let _ = fs::rename(bak, target);
+            let _ = rename_with_av_retry(bak, target);
         }
         return Err(format!(
             "Post-install SHA-256 verification failed for '{}'",
@@ -2529,7 +2556,9 @@ fn install_exe_atomic(
     }
 
     if let Some(ref bak) = backup_path {
-        if !hot_swapped {
+        if hot_swapped {
+            schedule_trash_cleanup_best_effort(bak);
+        } else {
             let _ = fs::remove_file(bak);
         }
     }
@@ -2719,15 +2748,12 @@ fn ps_escape_single_quoted(s: &str) -> String {
     s.replace('\'', "''")
 }
 
-fn spawn_elevated_updater_script(
+fn build_elevated_updater_script_text(
     config: &UpdaterConfig,
     version: &str,
     src_dir: &Path,
     cleanse_only: bool,
-) -> Result<(), String> {
-    let script_parent = src_dir.parent().unwrap_or(src_dir);
-    let script_path = script_parent.join("apply_phantom_spire_update.ps1");
-
+) -> String {
     let src_str = ps_escape_single_quoted(&src_dir.to_string_lossy());
     let canon_vst3_str = ps_escape_single_quoted(&config.canonical_vst3_dir.to_string_lossy());
     let canon_exe_str = ps_escape_single_quoted(&config.canonical_exe_path.to_string_lossy());
@@ -2743,11 +2769,32 @@ fn spawn_elevated_updater_script(
         .collect::<Vec<_>>()
         .join(", ");
 
-    let ps_script = format!(
+    let active_self_ps = collect_active_self_protected_keys(&config.temp_dir)
+        .into_iter()
+        .map(|k| format!("'{}'", ps_escape_single_quoted(&k)))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    format!(
         r#"param([switch]$Elevated)
 $ErrorActionPreference = 'Stop'
 if (-not {silent_flag}) {{
     Add-Type -AssemblyName System.Windows.Forms
+}}
+
+function Normalize-PathKey([string]$p) {{
+    if (-not $p) {{ return '' }}
+    try {{
+        $full = [System.IO.Path]::GetFullPath($p)
+    }} catch {{
+        $full = $p
+    }}
+    return $full.Replace('/', '\').TrimEnd('\').ToLowerInvariant()
+}}
+
+function Test-EphemeralOrTrashPath([string]$p) {{
+    $k = Normalize-PathKey $p
+    return ($k -like '*\.phantomspiretrash-*' -or $k -like '*\phantomspiretrash-*' -or $k -like '*\phantomspireupdate-*' -or $k -like '*\phantomspirecleanse-*' -or $k -like '*\target\*' -or $k -like '*\.git\*')
 }}
 
 try {{
@@ -2765,6 +2812,7 @@ try {{
             $p = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ArgumentList (
                 '-NoProfile -ExecutionPolicy Bypass -File "{{0}}" -Elevated' -f $PSCommandPath
             )
+            if ($null -eq $p.ExitCode) {{ exit 1 }}
             exit $p.ExitCode
         }} catch {{
             exit 2
@@ -2774,23 +2822,28 @@ try {{
     $trashRoot = Join-Path $tempBase ('PhantomSpireTrash-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
     New-Item -ItemType Directory -Force -Path $trashRoot | Out-Null
 
-    function Remove-OrMoveLocked([string]$targetPath) {{
-        if (-not (Test-Path $targetPath)) {{ return $false }}
+    function Remove-OrMoveLocked([string]$targetPath, [switch]$ReturnBackupPath) {{
+        if (-not (Test-Path $targetPath)) {{ return $null }}
+        $srcRoot = [System.IO.Path]::GetPathRoot($targetPath)
+        $tmpRoot = [System.IO.Path]::GetPathRoot($trashRoot)
+        $destDir = if ($srcRoot -ieq $tmpRoot) {{ $trashRoot }} else {{
+            $alt = Join-Path (Split-Path $targetPath -Parent) ('.PhantomSpireTrash-' + [guid]::NewGuid().ToString('N').Substring(0, 6))
+            New-Item -ItemType Directory -Force -Path $alt | Out-Null
+            $alt
+        }}
+        $destName = (Split-Path $targetPath -Leaf) + '.' + [guid]::NewGuid().ToString('N').Substring(0, 6)
+        $destPath = Join-Path $destDir $destName
         try {{
-            Remove-Item -Recurse -Force $targetPath -ErrorAction Stop
-            return $true
-        }} catch {{
-            $srcRoot = [System.IO.Path]::GetPathRoot($targetPath)
-            $tmpRoot = [System.IO.Path]::GetPathRoot($trashRoot)
-            $destDir = if ($srcRoot -ieq $tmpRoot) {{ $trashRoot }} else {{
-                $alt = Join-Path (Split-Path $targetPath -Parent) ('.PhantomSpireTrash-' + [guid]::NewGuid().ToString('N').Substring(0, 6))
-                New-Item -ItemType Directory -Force -Path $alt | Out-Null
-                $alt
+            if (-not $ReturnBackupPath) {{
+                Remove-Item -Recurse -Force $targetPath -ErrorAction Stop
+                return 'deleted'
             }}
-            $destName = (Split-Path $targetPath -Leaf) + '.' + [guid]::NewGuid().ToString('N').Substring(0, 6)
+            Move-Item -Path $targetPath -Destination $destPath -Force -ErrorAction Stop
+            return $destPath
+        }} catch {{
             try {{
-                Move-Item -Path $targetPath -Destination (Join-Path $destDir $destName) -Force -ErrorAction Stop
-                return $true
+                Move-Item -Path $targetPath -Destination $destPath -Force -ErrorAction Stop
+                return $destPath
             }} catch {{
                 if (Test-Path $targetPath -PathType Container) {{
                     Get-ChildItem -Path $targetPath -File -Recurse -ErrorAction SilentlyContinue | ForEach-Object {{
@@ -2802,7 +2855,7 @@ try {{
                         }}
                     }}
                     Remove-Item -Recurse -Force $targetPath -ErrorAction Stop
-                    return $true
+                    return 'deleted'
                 }}
                 throw
             }}
@@ -2816,50 +2869,120 @@ try {{
             $expectedHash = (Get-FileHash (Join-Path $srcVst3 'Contents\x86_64-win\phantom_spire.vst3')).Hash
             $canonParent = Split-Path $canonicalVst3 -Parent
             New-Item -ItemType Directory -Force -Path $canonParent | Out-Null
-            if (Test-Path $canonicalVst3) {{ [void](Remove-OrMoveLocked $canonicalVst3) }}
             $stageVst3 = Join-Path $canonParent ('.phantom_spire.vst3.new-' + [guid]::NewGuid().ToString('N').Substring(0, 6))
             if (Test-Path $stageVst3) {{ Remove-Item -Recurse -Force $stageVst3 }}
             Copy-Item -Recurse -Force $srcVst3 $stageVst3
-            Rename-Item -Path $stageVst3 -NewName (Split-Path $canonicalVst3 -Leaf)
-            $nested = Join-Path $canonicalVst3 'phantom_spire.vst3'
-            if (Test-Path $nested) {{ [void](Remove-OrMoveLocked $nested) }}
-            $dstDll = Join-Path $canonicalVst3 'Contents\x86_64-win\phantom_spire.vst3'
-            if (-not (Test-Path $dstDll) -or ((Get-FileHash $dstDll).Hash -ne $expectedHash)) {{ throw "SHA-256 failed for $dstDll" }}
+            $bakVst3 = $null
+            if (Test-Path $canonicalVst3) {{ $bakVst3 = Remove-OrMoveLocked $canonicalVst3 -ReturnBackupPath }}
+            try {{
+                for ($i = 0; $i -lt 20; $i++) {{
+                    try {{
+                        Rename-Item -Path $stageVst3 -NewName (Split-Path $canonicalVst3 -Leaf) -ErrorAction Stop
+                        break
+                    }} catch {{
+                        if ($i -eq 19) {{ throw }}
+                        Start-Sleep -Milliseconds 100
+                    }}
+                }}
+                $nested = Join-Path $canonicalVst3 'phantom_spire.vst3'
+                if (Test-Path $nested) {{ [void](Remove-OrMoveLocked $nested) }}
+                $dstDll = Join-Path $canonicalVst3 'Contents\x86_64-win\phantom_spire.vst3'
+                if (-not (Test-Path $dstDll) -or ((Get-FileHash $dstDll).Hash -ne $expectedHash)) {{ throw "SHA-256 failed for $dstDll" }}
+            }} catch {{
+                if (Test-Path $stageVst3) {{ Remove-Item -Recurse -Force $stageVst3 -ErrorAction SilentlyContinue }}
+                if ($bakVst3 -and ($bakVst3 -ne 'deleted') -and (Test-Path $bakVst3) -and -not (Test-Path $canonicalVst3)) {{
+                    Move-Item -Path $bakVst3 -Destination $canonicalVst3 -Force -ErrorAction SilentlyContinue
+                }}
+                throw
+            }}
         }}
         if (Test-Path $srcExe) {{
             $expectedExeHash = (Get-FileHash $srcExe).Hash
             $exeParent = Split-Path $canonicalExe -Parent
             New-Item -ItemType Directory -Force -Path $exeParent | Out-Null
-            if (Test-Path $canonicalExe) {{ [void](Remove-OrMoveLocked $canonicalExe) }}
-            Copy-Item -Force $srcExe $canonicalExe
-            if ((Get-FileHash $canonicalExe).Hash -ne $expectedExeHash) {{ throw "SHA-256 failed for $canonicalExe" }}
+            $stageExe = Join-Path $exeParent ('.phantom_spire.exe.new-' + [guid]::NewGuid().ToString('N').Substring(0, 6))
+            Copy-Item -Force $srcExe $stageExe
+            if ((Get-FileHash $stageExe).Hash -ne $expectedExeHash) {{
+                Remove-Item -Force $stageExe -ErrorAction SilentlyContinue
+                throw "Pre-swap SHA-256 failed for $stageExe"
+            }}
+            $bakExe = $null
+            if (Test-Path $canonicalExe) {{ $bakExe = Remove-OrMoveLocked $canonicalExe -ReturnBackupPath }}
+            try {{
+                $finalized = $false
+                for ($i = 0; $i -lt 20; $i++) {{
+                    try {{
+                        Move-Item -Path $stageExe -Destination $canonicalExe -Force -ErrorAction Stop
+                        $finalized = $true
+                        break
+                    }} catch {{
+                        if ($i -ge 4) {{
+                            try {{
+                                Copy-Item -Force $stageExe $canonicalExe -ErrorAction Stop
+                                Remove-Item -Force $stageExe -ErrorAction SilentlyContinue
+                                $finalized = $true
+                                break
+                            }} catch {{}}
+                        }}
+                        if ($i -eq 19) {{ throw }}
+                        Start-Sleep -Milliseconds 100
+                    }}
+                }}
+                if (-not $finalized -or -not (Test-Path $canonicalExe) -or ((Get-FileHash $canonicalExe).Hash -ne $expectedExeHash)) {{
+                    throw "SHA-256 failed for $canonicalExe"
+                }}
+            }} catch {{
+                if ($bakExe -and ($bakExe -ne 'deleted') -and (Test-Path $bakExe) -and -not (Test-Path $canonicalExe)) {{
+                    Move-Item -Path $bakExe -Destination $canonicalExe -Force -ErrorAction SilentlyContinue
+                }}
+                if (Test-Path $stageExe) {{ Remove-Item -Force $stageExe -ErrorAction SilentlyContinue }}
+                throw
+            }}
         }}
     }}
 
     $canonDll = Join-Path $canonicalVst3 'Contents\x86_64-win\phantom_spire.vst3'
+    $protectedKeys = @((Normalize-PathKey $canonicalVst3), (Normalize-PathKey $canonDll), (Normalize-PathKey $canonicalExe))
+    foreach ($ak in @({active_self_ps})) {{
+        if ($ak) {{ $protectedKeys += (Normalize-PathKey $ak) }}
+    }}
+    $protectedKeys = $protectedKeys | Where-Object {{ $_ }} | Select-Object -Unique
+    $canonVst3Key = Normalize-PathKey $canonicalVst3
+
     $cleansed = 0
     foreach ($root in $roots) {{
         Get-ChildItem -Path $root -Filter 'phantom_spire.vst3' -Recurse -Depth 5 -ErrorAction SilentlyContinue | ForEach-Object {{
             $full = $_.FullName
-            if ($full.Equals($canonDll, [StringComparison]::OrdinalIgnoreCase)) {{
+            if (Test-EphemeralOrTrashPath $full) {{ return }}
+            $k = Normalize-PathKey $full
+            if ($protectedKeys -contains $k) {{
+                if ($k -eq $canonVst3Key) {{
+                    $nested = Join-Path $full 'phantom_spire.vst3'
+                    if (Test-Path $nested) {{ if (Remove-OrMoveLocked $nested) {{ $cleansed++ }} }}
+                }}
                 return
             }}
-            if (-not $full.Equals($canonicalVst3, [StringComparison]::OrdinalIgnoreCase)) {{
-                if (Remove-OrMoveLocked $full) {{ $cleansed++ }}
-            }} else {{
-                $nested = Join-Path $full 'phantom_spire.vst3'
-                if (Test-Path $nested) {{ if (Remove-OrMoveLocked $nested) {{ $cleansed++ }} }}
-            }}
+            if (Remove-OrMoveLocked $full) {{ $cleansed++ }}
         }}
         Get-ChildItem -Path $root -Filter 'phantom_spire.vst3.bak' -Recurse -Depth 5 -ErrorAction SilentlyContinue | ForEach-Object {{
-            if (Remove-OrMoveLocked $_.FullName) {{ $cleansed++ }}
+            if (-not (Test-EphemeralOrTrashPath $_.FullName)) {{
+                if (Remove-OrMoveLocked $_.FullName) {{ $cleansed++ }}
+            }}
         }}
         Get-ChildItem -Path $root -Filter 'phantom_spire.clap' -Recurse -Depth 5 -ErrorAction SilentlyContinue | ForEach-Object {{
-            if (Remove-OrMoveLocked $_.FullName) {{ $cleansed++ }}
+            if (-not (Test-EphemeralOrTrashPath $_.FullName)) {{
+                $k = Normalize-PathKey $_.FullName
+                if (-not ($protectedKeys -contains $k)) {{
+                    if (Remove-OrMoveLocked $_.FullName) {{ $cleansed++ }}
+                }}
+            }}
         }}
         Get-ChildItem -Path $root -Filter 'phantom_spire.exe' -File -Recurse -Depth 5 -ErrorAction SilentlyContinue | ForEach-Object {{
-            if (-not $_.FullName.Equals($canonicalExe, [StringComparison]::OrdinalIgnoreCase)) {{
-                if (Remove-OrMoveLocked $_.FullName) {{ $cleansed++ }}
+            if (-not (Test-EphemeralOrTrashPath $_.FullName)) {{
+                $k = Normalize-PathKey $_.FullName
+                if (-not ($protectedKeys -contains $k)) {{
+                    if (Remove-OrMoveLocked $_.FullName) {{ $cleansed++ }}
+                }}
             }}
         }}
     }}
@@ -2892,7 +3015,18 @@ try {{
     exit 1
 }}
 "#
-    );
+    )
+}
+
+fn spawn_elevated_updater_script(
+    config: &UpdaterConfig,
+    version: &str,
+    src_dir: &Path,
+    cleanse_only: bool,
+) -> Result<(), String> {
+    let script_parent = src_dir.parent().unwrap_or(src_dir);
+    let script_path = script_parent.join("apply_phantom_spire_update.ps1");
+    let ps_script = build_elevated_updater_script_text(config, version, src_dir, cleanse_only);
 
     let mut script_bytes = Vec::with_capacity(3 + ps_script.len());
     script_bytes.extend_from_slice(&[0xEF, 0xBB, 0xBF]);
@@ -3079,5 +3213,118 @@ mod tests {
     fn current_module_path_returns_existing_file() {
         let p = current_module_path().expect("GetModuleHandleExW should locate current module");
         assert!(p.exists(), "module path should exist: {}", p.display());
+    }
+
+    #[test]
+    fn ephemeral_or_build_path_filters_target_and_trash() {
+        let tmp = Path::new("C:\\Users\\test\\AppData\\Local\\Temp");
+        assert!(is_ephemeral_or_build_path(
+            Path::new("C:\\repo\\target\\release\\phantom_spire.exe"),
+            tmp
+        ));
+        assert!(is_ephemeral_or_build_path(
+            Path::new("C:\\Users\\test\\AppData\\Local\\Temp\\PhantomSpireTrash-12\\phantom_spire.exe.1"),
+            tmp
+        ));
+        assert!(!is_ephemeral_or_build_path(
+            Path::new("C:\\Program Files\\Common Files\\VST3\\phantom_spire.vst3"),
+            tmp
+        ));
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn generated_ps1_script_updates_and_cleanses_without_deleting_canonical() {
+        let root = std::env::temp_dir().join(format!("ps_ps1_e2e_{}", unique_nonce()));
+        let src_dir = root.join("src");
+        let canon_root = root.join("Canon");
+        let stale_root = root.join("Stale");
+        let temp_dir = root.join("Tmp");
+
+        let src_vst3_dll = src_dir
+            .join("phantom_spire.vst3")
+            .join("Contents")
+            .join("x86_64-win")
+            .join("phantom_spire.vst3");
+        fs::create_dir_all(src_vst3_dll.parent().unwrap()).unwrap();
+        fs::write(&src_vst3_dll, b"NEW_VST3_PS1_DATA").unwrap();
+        let src_exe = src_dir.join("phantom_spire.exe");
+        fs::write(&src_exe, b"NEW_EXE_PS1_DATA").unwrap();
+
+        let canon_vst3_dir = canon_root.join("Common").join("VST3").join("phantom_spire.vst3");
+        let old_canon_dll = canon_vst3_dir
+            .join("Contents")
+            .join("x86_64-win")
+            .join("phantom_spire.vst3");
+        fs::create_dir_all(old_canon_dll.parent().unwrap()).unwrap();
+        fs::write(&old_canon_dll, b"OLD_CANON_VST3").unwrap();
+
+        let canon_exe = canon_root.join("PhantomSpire").join("phantom_spire.exe");
+        fs::create_dir_all(canon_exe.parent().unwrap()).unwrap();
+        fs::write(&canon_exe, b"OLD_CANON_EXE").unwrap();
+
+        let stale_exe = stale_root.join("phantom_spire.exe");
+        let stale_vst3_dll = stale_root
+            .join("phantom_spire.vst3")
+            .join("Contents")
+            .join("x86_64-win")
+            .join("phantom_spire.vst3");
+        fs::create_dir_all(stale_vst3_dll.parent().unwrap()).unwrap();
+        fs::write(&stale_vst3_dll, b"STALE_VST3").unwrap();
+        fs::write(&stale_exe, b"STALE_EXE").unwrap();
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        // Deliberately pass mixed forward slashes to verify Normalize-PathKey handles mismatch!
+        let mixed_canon_vst3 = PathBuf::from(format!(
+            "{}/",
+            canon_vst3_dir.to_string_lossy().replace('\\', "/")
+        ));
+        let cfg = UpdaterConfig {
+            current_version: String::from("0.3.1"),
+            manifest_url: String::from("http://127.0.0.1:1/latest.json"),
+            trusted_url_prefix: String::from("http://127.0.0.1:1/"),
+            scan_roots: vec![canon_root.clone(), stale_root.clone()],
+            canonical_vst3_dir: mixed_canon_vst3,
+            canonical_exe_path: canon_exe.clone(),
+            temp_dir: temp_dir.clone(),
+            silent_mode: true,
+            auto_update_disabled: true,
+            http_timeout_secs: 4,
+            require_sha256: false,
+        };
+
+        let script_text = build_elevated_updater_script_text(&cfg, "0.3.2", &src_dir, false);
+        let ps1_path = root.join("test_updater.ps1");
+        let mut bytes = vec![0xEF, 0xBB, 0xBF];
+        bytes.extend_from_slice(script_text.as_bytes());
+        fs::write(&ps1_path, bytes).unwrap();
+
+        let out = hidden_command("powershell.exe")
+            .args([
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                &ps1_path.to_string_lossy(),
+                "-Elevated",
+            ])
+            .output()
+            .expect("powershell.exe should run test updater script");
+        assert!(
+            out.status.success(),
+            "PowerShell script failed: stdout={} stderr={}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        );
+
+        assert_eq!(fs::read(&old_canon_dll).unwrap(), b"NEW_VST3_PS1_DATA");
+        assert_eq!(fs::read(&canon_exe).unwrap(), b"NEW_EXE_PS1_DATA");
+        assert!(!stale_exe.exists(), "stale EXE should be cleansed");
+        assert!(
+            !stale_root.join("phantom_spire.vst3").exists(),
+            "stale VST3 should be cleansed"
+        );
+
+        let _ = fs::remove_dir_all(&root);
     }
 }

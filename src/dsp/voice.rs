@@ -695,8 +695,8 @@ impl Voice {
         let vel_sens = settings.global.velocity_sensitivity.clamp(0.0, 1.0);
         let vel_gain = (1.0 - vel_sens) + vel_sens * self.velocity;
         let env_gain = mod_in.amp_env.clamp(0.0, 2.0);
-        // Per-voice nominal headroom factor keeps multi-voice chords clean
-        let gain = vel_gain * env_gain * 0.45;
+        // Per-voice nominal headroom factor keeps multi-voice chords clean before poly scaling
+        let gain = vel_gain * env_gain * 0.38;
 
         // Voice-level stereo pan modulation
         let pan = mod_in.voice_pan.clamp(-1.0, 1.0);

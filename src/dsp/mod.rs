@@ -59,6 +59,9 @@ pub struct SynthEngine {
     fx_rack: FxRack,
     master: MasterSection,
 
+    poly_headroom_gain: f32,
+    poly_headroom_slew: f32,
+
     pitch_bend: f32,
     mod_wheel: f32,
     channel_pressure: f32,
@@ -92,6 +95,8 @@ impl SynthEngine {
             global_mod: GlobalModState::new(sr),
             fx_rack: FxRack::new(sr),
             master: MasterSection::new(sr),
+            poly_headroom_gain: 1.0,
+            poly_headroom_slew: 1.0 - (-1.0 / (0.015 * sr).max(1.0)).exp(),
             pitch_bend: 0.0,
             mod_wheel: 0.0,
             channel_pressure: 0.0,
@@ -106,6 +111,7 @@ impl SynthEngine {
     pub fn set_sample_rate(&mut self, sample_rate: f32) {
         if sample_rate.is_finite() && sample_rate >= 8000.0 {
             self.sample_rate = sample_rate;
+            self.poly_headroom_slew = 1.0 - (-1.0 / (0.015 * sample_rate).max(1.0)).exp();
             self.arp.set_sample_rate(sample_rate);
             self.allocator.set_sample_rate(sample_rate);
             for vm in &mut self.voice_mods {
@@ -127,6 +133,7 @@ impl SynthEngine {
         self.global_mod.reset();
         self.fx_rack.reset();
         self.master.reset();
+        self.poly_headroom_gain = 1.0;
         self.pitch_bend = 0.0;
         self.mod_wheel = 0.0;
         self.channel_pressure = 0.0;
@@ -400,6 +407,7 @@ impl SynthEngine {
         let mut sum_l = 0.0_f32;
         let mut sum_r = 0.0_f32;
         let mut env_peaks = [0.0_f32; 4];
+        let mut active_energy_voices = 0.0_f32;
 
         for i in 0..MAX_VOICES {
             if !self.allocator.voices()[i].is_active() {
@@ -420,6 +428,7 @@ impl SynthEngine {
             let (vl, vr) = self.allocator.voices_mut()[i].render_sample(voice_settings, &v_mod_in);
             sum_l += vl;
             sum_r += vr;
+            active_energy_voices += amp_gain.clamp(0.0, 1.0);
 
             let levels = self.voice_mods[i].env_levels();
             for e in 0..4 {
@@ -433,6 +442,14 @@ impl SynthEngine {
                 self.mod_gate_open[i] = false;
             }
         }
+
+        // Smooth polyphonic headroom scaling so playing 4-6+ note chords doesn't push FX/Master into clipping
+        let n_eff = active_energy_voices.max(1.0);
+        let target_poly_scale = n_eff.powf(-0.28).clamp(0.42, 1.0);
+        self.poly_headroom_gain +=
+            (target_poly_scale - self.poly_headroom_gain) * self.poly_headroom_slew;
+        sum_l *= self.poly_headroom_gain;
+        sum_r *= self.poly_headroom_gain;
 
         self.last_env_levels = env_peaks;
         let global_mods = self.global_mod.finish_sample();
@@ -491,6 +508,10 @@ impl SynthEngine {
             if sample_idx > 0 && (sample_idx & 15) == 0 {
                 voice_settings = self.make_voice_settings(params, shared_synth);
             }
+            voice_settings.filters[0].cutoff = params.filters[0].cutoff.smoothed.next();
+            voice_settings.filters[0].resonance = params.filters[0].resonance.smoothed.next();
+            voice_settings.filters[1].cutoff = params.filters[1].cutoff.smoothed.next();
+            voice_settings.filters[1].resonance = params.filters[1].resonance.smoothed.next();
             let gain = params.master.volume.smoothed.next();
             let (out_l, out_r) = self.process_sample_full(
                 params,
@@ -606,5 +627,43 @@ mod tests {
         assert!(ch_l.iter().any(|s| s.abs() > 0.01));
         assert_eq!(ui_state.active_voice_count.load(Ordering::Relaxed), 1);
         assert!(ui_state.get_env_level(0) > 0.0);
+    }
+
+    #[test]
+    fn six_note_chord_headroom_and_limiter_prevent_clipping() {
+        let sr = 44100.0;
+        let mut engine = SynthEngine::new(sr);
+        let mut params = PhantomSpireParams::default();
+        let shared = SharedSynthState::default();
+        let ui = SharedUiState::default();
+        let transport = TransportInfo {
+            sample_rate: sr,
+            ..Default::default()
+        };
+
+        // Drive heavy 2-oscillator unison supersaw stack + master Boost
+        crate::params::set_int_param(&mut params.oscs[0].unison_count, 7);
+        crate::params::set_float_param(&mut params.oscs[0].mix_level, 0.9);
+        crate::params::set_float_param(&mut params.oscs[1].mix_level, 0.6);
+        crate::params::set_bool_param(&mut params.master.boost, true);
+        crate::params::set_bool_param(&mut params.master.soft_limit, true);
+
+        // 6-note rich jazz chord all triggered at velocity 1.0
+        for &n in &[48u8, 55, 60, 64, 67, 71] {
+            engine.note_on(n, 1.0, 0);
+        }
+
+        let mut peak = 0.0_f32;
+        for _ in 0..40 {
+            let (l, r) = run_block(&mut engine, &params, &shared, &ui, &transport, 512);
+            for &s in l.iter().chain(r.iter()) {
+                assert!(s.is_finite());
+                peak = peak.max(s.abs());
+            }
+        }
+        assert!(
+            peak <= 0.985 && peak > 0.25,
+            "6-note hot chord peak out of clean range: {peak}"
+        );
     }
 }

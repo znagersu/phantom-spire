@@ -19,6 +19,15 @@ use std::f32::consts::{PI, TAU};
 // Shared Lightweight DSP Building Blocks (Zero-Alloc)
 // ============================================================================
 
+/// Dry-preserving constant-power-style blend: keeps the dry signal strong across
+/// typical 0..60% FX mix levels while still reaching 100% wet at `mix = 1.0`.
+#[inline]
+fn dry_preserving_mix(dry: f32, wet: f32, mix: f32) -> f32 {
+    let m = mix.clamp(0.0, 1.0);
+    let dry_g = (1.0 - m * m).max(0.0).sqrt();
+    flush_denormal(dry * dry_g + wet * m)
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 struct OnePole {
     z1: f32,
@@ -556,7 +565,7 @@ impl PhaserFx {
         self.fb_l = flush_denormal(xl).clamp(-2.0, 2.0);
         self.fb_r = flush_denormal(xr).clamp(-2.0, 2.0);
 
-        // Classic phaser interference: at mix = 0.5, 50% dry + 50% allpass yields deep notches
+        // Classic phaser interference: linear crossfade yields 1 - 0.5*mix dry + 0.5*mix allpass
         let wet_l = 0.5 * (left + xl);
         let wet_r = 0.5 * (right + xr);
         let out_l = flush_denormal(left + (wet_l - left) * mix);
@@ -658,13 +667,14 @@ impl ChorusFx {
 
         let (mut wl, mut wr) = match mode {
             ChorusMode::Chorus => {
-                // Classic 2-tap quadrature stereo chorus
-                let d_l = (base_samp + (p * TAU).sin() * mod_amp_samp).max(2.0);
-                let d_r = (base_samp + ((p + 0.25) * TAU).sin() * mod_amp_samp).max(2.0);
+                // Classic 2-tap quadrature stereo chorus with offset L/R center delays
+                // so summing to mono doesn't produce deep symmetric comb cancellations.
+                let d_l = (base_samp * 0.93 + (p * TAU).sin() * mod_amp_samp).max(2.0);
+                let d_r = (base_samp * 1.07 + ((p + 0.25) * TAU).sin() * mod_amp_samp).max(2.0);
                 (self.delay_l.read_cubic(d_l), self.delay_r.read_cubic(d_r))
             }
             ChorusMode::Ensemble => {
-                // 3-phase (0 / 120 / 240 deg) thick string-ensemble chorus
+                // 3-phase (0 / 120 / 240 deg) string-ensemble chorus, level-matched to dry
                 let l0 = (p * TAU).sin();
                 let l1 = ((p + 1.0 / 3.0) * TAU).sin();
                 let l2 = ((p + 2.0 / 3.0) * TAU).sin();
@@ -685,18 +695,22 @@ impl ChorusFx {
                     .delay_l
                     .read_cubic((base_samp * 0.84 + l0 * mod_amp_samp * 0.9).max(2.0));
 
-                ((tl0 + tl1 + tl2 * 0.7) * 0.42, (tr0 + tr1 + tr2 * 0.7) * 0.42)
+                ((tl0 + tl1 + tl2 * 0.7) * 0.34, (tr0 + tr1 + tr2 * 0.7) * 0.34)
             }
             ChorusMode::Dimension => {
-                // 4-tap Dimension-D style opposing-phase cross-mixed stereo widener
+                // 4-tap Dimension-D style M/S-safe stereo widener: mono sum (wl + wr)/2 stays intact.
                 let s0 = (p * TAU).sin();
-                let s1 = ((p + 0.5) * TAU).sin();
+                let s1 = ((p + 0.25) * TAU).sin();
                 let amp = mod_amp_samp * 0.55;
-                let a = self.delay_l.read_cubic((base_samp * 0.75 + s0 * amp).max(2.0));
-                let b = self.delay_r.read_cubic((base_samp * 1.25 + s1 * amp).max(2.0));
-                let c = self.delay_l.read_cubic((base_samp * 1.15 - s0 * amp).max(2.0));
-                let d = self.delay_r.read_cubic((base_samp * 0.85 - s1 * amp).max(2.0));
-                (0.5 * (a + c) - 0.35 * (b - d), 0.5 * (b + d) - 0.35 * (a - c))
+                let a = self.delay_l.read_cubic((base_samp * 0.77 + s0 * amp).max(2.0));
+                let b = self.delay_r.read_cubic((base_samp * 1.23 + s1 * amp).max(2.0));
+                let c = self.delay_l.read_cubic((base_samp * 1.13 - s0 * amp).max(2.0));
+                let d = self.delay_r.read_cubic((base_samp * 0.87 - s1 * amp).max(2.0));
+                let core_l = 0.5 * (a + c);
+                let core_r = 0.5 * (b + d);
+                let mid = 0.5 * (core_l + core_r);
+                let side = 0.5 * (core_l - core_r) + 0.22 * ((b - d) - (a - c));
+                (mid + side, mid - side)
             }
         };
 
@@ -715,8 +729,9 @@ impl ChorusFx {
         self.fb_l = flush_denormal(wl);
         self.fb_r = flush_denormal(wr);
 
-        let out_l = flush_denormal(left + (wl - left) * mix);
-        let out_r = flush_denormal(right + (wr - right) * mix);
+        let wet_trim = 0.74 + 0.26 * mix;
+        let out_l = dry_preserving_mix(left, wl * wet_trim, mix);
+        let out_r = dry_preserving_mix(right, wr * wet_trim, mix);
         (out_l, out_r)
     }
 }
@@ -849,8 +864,8 @@ impl DelayFx {
             self.delay_r.write(write_r);
         }
 
-        let out_l = flush_denormal(left + (read_l - left) * mix);
-        let out_r = flush_denormal(right + (read_r - right) * mix);
+        let out_l = dry_preserving_mix(left, read_l, mix);
+        let out_r = dry_preserving_mix(right, read_r, mix);
         (out_l, out_r)
     }
 }
@@ -908,6 +923,8 @@ pub struct ReverbFx {
     diff_r: [AllpassDelay; DIFF_STAGES],
     fdn_lines: [DelayLine; FDN_CHANNELS],
     fdn_damp: [OnePole; FDN_CHANNELS],
+    mud_hp_l: OnePole,
+    mud_hp_r: OnePole,
     color_lp_l: OnePole,
     color_lp_r: OnePole,
     color_hp_l: OnePole,
@@ -938,6 +955,8 @@ impl ReverbFx {
             diff_r,
             fdn_lines,
             fdn_damp: [OnePole::default(); FDN_CHANNELS],
+            mud_hp_l: OnePole::default(),
+            mud_hp_r: OnePole::default(),
             color_lp_l: OnePole::default(),
             color_lp_r: OnePole::default(),
             color_hp_l: OnePole::default(),
@@ -982,6 +1001,8 @@ impl ReverbFx {
         for d in &mut self.fdn_damp {
             d.reset();
         }
+        self.mud_hp_l.reset();
+        self.mud_hp_r.reset();
         self.color_lp_l.reset();
         self.color_lp_r.reset();
         self.color_hp_l.reset();
@@ -1059,11 +1080,13 @@ impl ReverbFx {
         let color = params.color.value().clamp(-1.0, 1.0);
         let wide = params.wide.value().clamp(0.0, 1.0);
 
-        // 1. Pre-delay
+        // 1. Pre-delay & subtle sub-bass mud filter so long tails never fog dry lows
         self.predelay_l.write(left);
         self.predelay_r.write(right);
-        let mut dl = self.predelay_l.read_linear(predelay_samp);
-        let mut dr = self.predelay_r.read_linear(predelay_samp);
+        let mud_cut = if color < -0.2 { 75.0 } else { 110.0 };
+        let mud_c = OnePole::lp_coeff(mud_cut, sr);
+        let mut dl = self.mud_hp_l.process_hp(self.predelay_l.read_linear(predelay_samp), mud_c);
+        let mut dr = self.mud_hp_r.process_hp(self.predelay_r.read_linear(predelay_samp), mud_c);
 
         // 2. Input diffusion allpass cascade
         for i in 0..DIFF_STAGES {
@@ -1102,8 +1125,12 @@ impl ReverbFx {
         let mut mixed = taps;
         Self::hadamard8(&mut mixed);
 
-        // Inject diffused stereo input across the 8 channels with alternating polarity
-        let in_scale = 0.35;
+        // Inject diffused stereo input across the 8 channels with RT60 energy normalization
+        // so long Ambient/Hall decays never swell louder than dry or drown out chords.
+        let avg_delay_s = 0.050 * size_scale;
+        let g_avg = (10.0_f32.powf(-3.0 * avg_delay_s / rt60)).clamp(0.1, 0.992);
+        let rt_norm = (1.0 - g_avg * g_avg).max(0.03).sqrt();
+        let in_scale = (0.64 * rt_norm).clamp(0.12, 0.44);
         self.fdn_lines[0].write(mixed[0] + dl * in_scale);
         self.fdn_lines[1].write(mixed[1] + dr * in_scale);
         self.fdn_lines[2].write(mixed[2] - dl * in_scale);
@@ -1142,8 +1169,9 @@ impl ReverbFx {
         wet_l = mid + side;
         wet_r = mid - side;
 
-        let out_l = flush_denormal(left + (wet_l - left) * mix);
-        let out_r = flush_denormal(right + (wet_r - right) * mix);
+        let wet_trim = 0.72 + 0.28 * mix;
+        let out_l = dry_preserving_mix(left, wet_l * wet_trim, mix);
+        let out_r = dry_preserving_mix(right, wet_r * wet_trim, mix);
         (out_l, out_r)
     }
 }
@@ -1482,5 +1510,52 @@ mod tests {
                 assert!(l.is_finite() && r.is_finite() && l.abs() <= 2.0 && r.abs() <= 2.0);
             }
         }
+    }
+
+    #[test]
+    fn chorus_and_reverb_preserve_dry_signal_and_mono_phase_coherence() {
+        let sr = 48000.0;
+        let mods = GlobalModOffsets::default();
+        let dry = gen_test_signal(16384, sr);
+        let mono_dry: Vec<f32> = dry[4096..].iter().map(|&(l, r)| 0.5 * (l + r)).collect();
+        let rms_mono = |buf: &[f32]| -> f32 {
+            (buf.iter().map(|x| x * x).sum::<f32>() / buf.len() as f32).sqrt()
+        };
+        let dry_rms = rms_mono(&mono_dry);
+
+        for mode in [ChorusMode::Chorus, ChorusMode::Ensemble, ChorusMode::Dimension] {
+            let mut p = ChorusParams::default();
+            set_enum_param(&mut p.mode, mode);
+            set_float_param(&mut p.dry_wet, 0.45);
+            let mut chr = ChorusFx::new(sr);
+            let out: Vec<(f32, f32)> = dry
+                .iter()
+                .map(|&(l, r)| chr.process_sample(l, r, &p, &mods))
+                .collect();
+            let mono_out: Vec<f32> = out[4096..].iter().map(|&(l, r)| 0.5 * (l + r)).collect();
+            let out_rms = rms_mono(&mono_out);
+            assert!(
+                out_rms >= dry_rms * 0.65 && out_rms <= dry_rms * 1.45,
+                "Chorus {mode:?} mono collapse out of healthy range: out={out_rms} dry={dry_rms}"
+            );
+        }
+
+        // Long Ambient reverb @ 40% mix must preserve dry clarity & mono energy
+        let mut rp = ReverbParams::default();
+        set_enum_param(&mut rp.mode, ReverbMode::Ambient);
+        set_float_param(&mut rp.decay, 8.0);
+        set_float_param(&mut rp.wide, 1.0);
+        set_float_param(&mut rp.dry_wet, 0.40);
+        let mut rev = ReverbFx::new(sr);
+        let rev_out: Vec<(f32, f32)> = dry
+            .iter()
+            .map(|&(l, r)| rev.process_sample(l, r, &rp, &mods))
+            .collect();
+        let rev_mono: Vec<f32> = rev_out[4096..].iter().map(|&(l, r)| 0.5 * (l + r)).collect();
+        let rev_rms = rms_mono(&rev_mono);
+        assert!(
+            rev_rms >= dry_rms * 0.72 && rev_rms <= dry_rms * 1.55,
+            "Ambient reverb mono collapse or drowning failed: rev={rev_rms} dry={dry_rms}"
+        );
     }
 }

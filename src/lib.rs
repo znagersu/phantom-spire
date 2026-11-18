@@ -689,6 +689,10 @@ impl Plugin for PhantomSpire {
                 next_ev = context.next_event();
             }
 
+            voice_settings.filters[0].cutoff = self.params.filters[0].cutoff.smoothed.next();
+            voice_settings.filters[0].resonance = self.params.filters[0].resonance.smoothed.next();
+            voice_settings.filters[1].cutoff = self.params.filters[1].cutoff.smoothed.next();
+            voice_settings.filters[1].resonance = self.params.filters[1].resonance.smoothed.next();
             let gain = self.params.master.volume.smoothed.next();
             let (out_l, out_r) = self.synth.process_sample_full(
                 &self.params,

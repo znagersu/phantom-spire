@@ -9,60 +9,208 @@
     "Noise"
   ],
   "params": {
-    "g_voc": 8,
-    "g_utun": "Equal",
-    "o_mod_1": "Noise",
-    "o_wav_1": "Hollow",
-    "o_ca_1": 0.65,
-    "o_cb_1": 0.5,
-    "o_ucnt_1": 3,
-    "o_udet_1": 0.36,
-    "o_wid_1": 0.85,
-    "o_lvl_1": 0.76,
-    "o_mod_2": "FM",
-    "o_wav_2": "Metallic",
-    "o_fbal_2": 1.0,
-    "o_lvl_2": 0.48,
+    "e_att_1": 0.004999999888241291,
+    "e_dec_1": 0.55,
+    "e_rel_1": 0.3499999940395355,
+    "e_sus_1": 0.65,
+    "f_cut_1": 5642.39990234375,
     "f_mod_1": "Perfecto",
-    "f_typ_1": "BP2",
-    "f_cut_1": 2600.0,
-    "f_res_1": 0.4,
-    "f_mod_2": "Scorpio",
-    "f_typ_2": "Notch",
-    "f_cut_2": 2200.0,
-    "fr_par": false,
-    "e_att_1": 0.02,
-    "e_dec_1": 1.6,
-    "e_sus_1": 0.7,
-    "e_rel_1": 1.1,
-    "e_att_2": 1.5,
-    "e_dec_2": 0.8,
-    "e_sus_2": 0.9,
-    "e_rel_2": 0.2,
-    "es_tgt_1_2": "All Pitch",
-    "es_amt_1_2": 0.2,
-    "l_rat_1": 14.0,
-    "l_wav_1": "S&H",
+    "f_res_1": 0.28,
+    "f_typ_1": "LP2",
+    "g_drft": true,
+    "g_pmod": "Poly",
+    "g_voc": 8,
+    "k_boos": false,
+    "k_lim": true,
+    "k_vol": 1.5499999523162842,
+    "l_rat_1": 3.374000072479248,
+    "ls_amt_1_1": 0.3,
     "ls_tgt_1_1": "Filter1 Cutoff",
-    "ls_amt_1_1": 0.55,
-    "m_src_1": "LFO 1",
-    "m_tgt_1": "Filter2 Cutoff",
-    "m_amt_1": -0.45,
-    "x_smod": "Bitcrush",
-    "x_sdrv": 0.5,
-    "x_sbit": 0.32,
-    "x_sdw": 0.38,
-    "x_pstg": 8,
-    "x_prat": 0.8,
-    "x_pfb": 0.65,
-    "x_pdw": 0.15,
-    "x_dsyn": true,
+    "o_ca_1": 0.5,
+    "o_cb_1": 0.42,
+    "o_lvl_1": 0.66,
+    "o_lvl_2": 0.26,
+    "o_mod_1": "Noise",
+    "o_mod_2": "Classic",
+    "o_oct_2": -1,
+    "o_ucnt_1": 3,
+    "o_udet_1": 0.3,
+    "o_wav_1": "Formant",
+    "o_wav_2": "Sub",
+    "o_wid_1": 0.78,
+    "x_cloc": 130.0,
+    "x_cmut": false,
+    "x_ddw": 0.22,
+    "x_dfb": 0.42,
+    "x_dmut": false,
     "x_dpp": true,
-    "x_dfb": 0.52,
-    "x_ddw": 0.36,
-    "x_rmod": "Ambient",
-    "x_rdec": 5.5,
-    "x_rdw": 0.44,
-    "k_lim": true
+    "x_dsyn": true,
+    "x_pdw": 0.2,
+    "x_pmut": false,
+    "x_rdec": 3.2,
+    "x_rdw": 0.26,
+    "x_rmod": "Hall",
+    "x_rmut": false,
+    "x_smut": false
+  },
+  "steppers": [
+    [
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ],
+    [
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ]
+  ],
+  "stepper_ties": [
+    0,
+    0
+  ],
+  "arp_pattern": {
+    "steps_enabled": 65535,
+    "step_offsets": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "step_velocities": [
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100,
+      100
+    ]
+  },
+  "mod_matrix": [
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    },
+    {
+      "source": 0,
+      "target": 0
+    }
+  ],
+  "microtuning": {
+    "preset": 0,
+    "cents": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ]
   }
 }
